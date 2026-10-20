@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Reflection.Emit;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Staybnb.Models;
 
@@ -28,16 +26,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder b)
     {
         base.OnModelCreating(b);
-
-        // SQL Server rejects "multiple cascade paths" (e.g. User -> Property -> Booking AND User -> Booking).
-        // Default every domain FK to Restrict, then opt in to Cascade only where a child is owned by its parent.
-        var domainNamespace = typeof(HostProperty).Namespace;
-        foreach (var fk in b.Model.GetEntityTypes()
-                     .Where(e => e.ClrType.Namespace == domainNamespace)
-                     .SelectMany(e => e.GetForeignKeys()))
-        {
-            fk.DeleteBehavior = DeleteBehavior.Restrict;
-        }
 
         // One-to-Many
         b.Entity<HostProperty>()
@@ -97,7 +85,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         b.Entity<WishlistItem>()
             .HasIndex(w => new { w.UserId, w.PropertyId }).IsUnique();
 
-        // One-to-One 
+        // One-to-One
         b.Entity<Payment>()
             .HasOne(p => p.Booking).WithOne(x => x.Payment)
             .HasForeignKey<Payment>(p => p.BookingId)
@@ -127,7 +115,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         b.Entity<HostProperty>()
             .HasMany(p => p.Amenities).WithMany(a => a.Properties);
 
-        // Decimal precision (18,2) as per the ERD
+        // Decimal precision (18,2) as per the ERD 
         b.Entity<HostProperty>().Property(p => p.PricePerNight).HasPrecision(18, 2);
         b.Entity<HostProperty>().Property(p => p.CleaningFee).HasPrecision(18, 2);
         b.Entity<Booking>().Property(x => x.TotalPrice).HasPrecision(18, 2);
@@ -135,7 +123,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         b.Entity<Booking>().Property(x => x.ServiceFee).HasPrecision(18, 2);
         b.Entity<Payment>().Property(p => p.Amount).HasPrecision(18, 2);
 
-        // Store enums as readable strings in SQL
+        // Store enums as readable strings in SQL 
         b.Entity<Booking>().Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
         b.Entity<Payment>().Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
         b.Entity<HostApplication>().Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
@@ -159,5 +147,27 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             new Amenity { Id = 6, Name = "Heating", IconClass = "bi-thermometer-sun" },
             new Amenity { Id = 7, Name = "Pool", IconClass = "bi-water" },
             new Amenity { Id = 8, Name = "Free Parking", IconClass = "bi-p-circle" });
+
+        // Cascade rules 
+        var cascadeAllowed = new HashSet<(Type Dependent, Type Principal)>
+        {
+            (typeof(PropertyImage),  typeof(HostProperty)),
+            (typeof(CheckInProcess), typeof(HostProperty)),
+            (typeof(Payment),        typeof(Booking)),
+            (typeof(GuestCheckIn),   typeof(Booking)),
+            (typeof(GuestDocument),  typeof(GuestCheckIn)),
+            (typeof(Notification),   typeof(ApplicationUser)),
+        };
+
+        var domainNamespace = typeof(HostProperty).Namespace;
+        foreach (var fk in b.Model.GetEntityTypes()
+                     .Where(e => e.ClrType.Namespace == domainNamespace)
+                     .SelectMany(e => e.GetForeignKeys()))
+        {
+            var key = (fk.DeclaringEntityType.ClrType, fk.PrincipalEntityType.ClrType);
+            fk.DeleteBehavior = cascadeAllowed.Contains(key)
+                ? DeleteBehavior.Cascade
+                : DeleteBehavior.Restrict;
+        }
     }
 }
