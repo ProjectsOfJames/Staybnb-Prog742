@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Staybnb</title>
+    <partial name="_HeadAssets" />
+</head>
+<body class="sb-guest">
+    <header class="sb-topnav">
+        <div class="container-xxl d-flex align-items-center justify-content-between gap-3">
+            <a href="/" class="sb-brand"><i class="bi bi-house-heart-fill"></i> staybnb</a>
+
+            <div class="sb-search-pill d-none d-md-flex">
+                <span>Anywhere</span>
+                <span>Any week</span>
+                <span class="text-muted">Add guests</span>
+                <a href="/Properties" class="sb-search-btn" aria-label="Search"><i class="bi bi-search"></i></a>
+            </div>
+
+            <nav class="d-flex align-items-center gap-3">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    if (User.IsInRole("Guest"))
+                    {
+                        <a class="sb-toplink d-none d-lg-inline" href="/HostApplication/Status">Host Application Status</a>
+                        <a class="sb-toplink d-none d-lg-inline" href="/HostApplication/Create">Become a Host</a>
+                        <partial name="_NotificationBell" model="@(0)" />
+                    }
+                    <partial name="_UserMenu" />
+                }
+                else
+                {
+                    <a class="sb-toplink" href="/Account/Login">Log in</a>
+                    <a class="btn btn-danger btn-sm rounded-pill px-3" href="/Account/Register">Sign up</a>
+                }
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer class="sb-footer">
+        <div class="container-xxl">&copy; @DateTime.Now.Year Staybnb &middot; Richfield Programming 742</div>
+    </footer>
+
+    <partial name="_FootScripts" />
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

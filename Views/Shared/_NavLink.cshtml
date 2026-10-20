@@ -1,0 +1,9 @@
+﻿@model (string Href, string Icon, string Text)
+@{
+    var path = Context.Request.Path.Value ?? "/";
+    var active = path.Equals(Model.Href, StringComparison.OrdinalIgnoreCase)
+              || path.StartsWith(Model.Href + "/", StringComparison.OrdinalIgnoreCase);
+}
+<a href="@Model.Href" class="sb-navlink @(active ? "active" : "")">
+    <i class="bi @Model.Icon"></i><span>@Model.Text</span>
+</a>

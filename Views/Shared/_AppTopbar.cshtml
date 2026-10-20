@@ -1,0 +1,11 @@
+﻿<header class="sb-topbar">
+    <button type="button" class="sb-icon-btn" data-sb-toggle aria-label="Toggle sidebar">
+        <i class="bi bi-list"></i>
+    </button>
+    <h1 class="sb-page-title">@ViewData["Title"]</h1>
+    <div class="d-flex align-items-center gap-2">
+        <a href="/Messages" class="sb-icon-btn" title="Messages"><i class="bi bi-envelope"></i></a>
+        <partial name="_NotificationBell" model="@(0)" />
+        <partial name="_UserMenu" />
+    </div>
+</header>

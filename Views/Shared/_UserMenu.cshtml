@@ -1,0 +1,32 @@
+﻿@{
+    var name = User.Identity?.Name ?? "";
+    var initial = name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+    var role = User.IsInRole("SuperAdmin") ? "Super Admin"
+             : User.IsInRole("Admin") ? "Administrator"
+             : User.IsInRole("Host") ? "Host"
+             : "Guest";
+}
+<div class="dropdown">
+    <button class="sb-menu-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="sb-avatar">@initial</span>
+        <span class="d-none d-md-inline text-start lh-sm">
+            <span class="d-block small fw-semibold">@name</span>
+            <span class="d-block text-muted" style="font-size:.7rem">@role</span>
+        </span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+        @if (User.IsInRole("Guest"))
+        {
+            <li><a class="dropdown-item" href="/Bookings">My Bookings</a></li>
+            <li><a class="dropdown-item" href="/Wishlist">Wishlist</a></li>
+            <li><a class="dropdown-item" href="/Messages">Messages</a></li>
+            <li><a class="dropdown-item" href="/Notifications">Notifications</a></li>
+            <li><hr class="dropdown-divider" /></li>
+        }
+        <li>
+            <form asp-controller="Account" asp-action="Logout" method="post">
+                <button type="submit" class="dropdown-item text-danger">Log out</button>
+            </form>
+        </li>
+    </ul>
+</div>

@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Staybnb Admin</title>
+    <partial name="_HeadAssets" />
+</head>
+<body class="sb-app">
+    <div class="sb-shell">
+        <aside class="sb-sidebar">
+            <a class="sb-brand sb-brand-side" href="/Admin/Dashboard">
+                <i class="bi bi-house-heart-fill"></i> staybnb <small>admin</small>
+            </a>
+            <nav class="sb-sidenav">
+                <partial name="_NavLink" model='("/Admin/Dashboard", "bi-speedometer2", "Dashboard")' />
+                @if (User.IsInRole("SuperAdmin"))
+                {
+                    <partial name="_NavLink" model='("/Admin/Users", "bi-people", "Users")' />
+                }
+                <partial name="_NavLink" model='("/Admin/HostRequests", "bi-file-earmark-text", "Host Requests")' />
+                <partial name="_NavLink" model='("/Admin/Bookings", "bi-calendar-check", "Bookings")' />
+                <partial name="_NavLink" model='("/Admin/Properties", "bi-house-door", "Properties")' />
+                <partial name="_NavLink" model='("/Messages", "bi-envelope", "Messages")' />
+                <partial name="_NavLink" model='("/Notifications", "bi-bell", "Notifications")' />
+                <partial name="_NavLink" model='("/Admin/ActivityLogs", "bi-clock-history", "Activity Logs")' />
+            </nav>
+            <form asp-controller="Account" asp-action="Logout" method="post" class="sb-side-logout">
+                <button type="submit"><i class="bi bi-box-arrow-left"></i><span>Logout</span></button>
+            </form>
+        </aside>
+
+        <div class="sb-main">
+            <partial name="_AppTopbar" />
+            <main class="sb-content">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <partial name="_FootScripts" />
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

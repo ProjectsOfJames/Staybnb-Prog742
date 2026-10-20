@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Staybnb Host</title>
+    <partial name="_HeadAssets" />
+</head>
+<body class="sb-app">
+    <div class="sb-shell">
+        <aside class="sb-sidebar">
+            <a class="sb-brand sb-brand-side" href="/Host/Dashboard">
+                <i class="bi bi-house-heart-fill"></i> staybnb <small>host</small>
+            </a>
+            <nav class="sb-sidenav">
+                <partial name="_NavLink" model='("/Host/Dashboard", "bi-speedometer2", "Dashboard")' />
+                <partial name="_NavLink" model='("/Host/Properties", "bi-house-door", "My Properties")' />
+                <partial name="_NavLink" model='("/Host/Bookings", "bi-calendar-check", "Booking Requests")' />
+                <partial name="_NavLink" model='("/Host/Earnings", "bi-cash-stack", "Earnings")' />
+                <partial name="_NavLink" model='("/Host/Reviews", "bi-star", "Reviews")' />
+                <partial name="_NavLink" model='("/Messages", "bi-envelope", "Messages")' />
+                <partial name="_NavLink" model='("/Notifications", "bi-bell", "Notifications")' />
+            </nav>
+            <form asp-controller="Account" asp-action="Logout" method="post" class="sb-side-logout">
+                <button type="submit"><i class="bi bi-box-arrow-left"></i><span>Logout</span></button>
+            </form>
+        </aside>
+
+        <div class="sb-main">
+            <partial name="_AppTopbar" />
+            <main class="sb-content">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <partial name="_FootScripts" />
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

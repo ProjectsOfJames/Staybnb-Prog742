@@ -1,0 +1,28 @@
+﻿@using System.Globalization
+@model Staybnb.ViewModels.PropertyCardVM
+@{
+    var rand = CultureInfo.GetCultureInfo("en-ZA");
+    var cover = Model.ImageUrls.FirstOrDefault();
+}
+<div class="sb-card position-relative">
+    <div class="sb-card-img">
+        @if (cover != null)
+        {
+            <img src="@cover" alt="@Model.Title" loading="lazy" />
+            <span class="sb-card-count"><i class="bi bi-camera-fill"></i> @Model.ImageUrls.Count</span>
+        }
+        else
+        {
+            <div class="sb-card-noimg"><i class="bi bi-image"></i></div>
+        }
+        <button type="button" class="sb-heart" data-property-id="@Model.Id" aria-label="Add to wishlist">
+            <i class="bi @(Model.IsWishlisted ? "bi-heart-fill" : "bi-heart")"></i>
+        </button>
+    </div>
+    <div class="sb-card-body">
+        <div class="small text-muted"><i class="bi bi-geo-alt-fill"></i> @Model.City</div>
+        <a href="/Properties/Details/@Model.Id" class="sb-card-title stretched-link">@Model.Title</a>
+        <div class="small"><strong>@Model.PricePerNight.ToString("C0", rand)</strong> <span class="text-muted">per night</span></div>
+        <div class="small"><i class="bi bi-star-fill" style="color:var(--sb-primary)"></i> @Model.AverageRating.ToString("0.0") (@Model.ReviewCount)</div>
+    </div>
+</div>

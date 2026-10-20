@@ -19,7 +19,7 @@ public class AccountController : Controller
         _signInManager = signInManager;
     }
 
-    // ---------- REGISTER ----------
+    // REGISTER 
     [HttpGet, AllowAnonymous]
     public IActionResult Register() => View(new RegisterViewModel());
 
@@ -46,13 +46,12 @@ public class AccountController : Controller
         // Requirement: ALL new registrants are automatically Guests
         await _userManager.AddToRoleAsync(user, RoleSeeder.Guest);
 
-        // TODO (Segment 9): _logger.LogAsync(user.Id, "UserRegistered", ActivityType.Registration);
-
+        
         await _signInManager.SignInAsync(user, isPersistent: false);
         return await RedirectByRoleAsync(user);
     }
 
-    // ---------- LOGIN ----------
+    // LOGIN
     [HttpGet, AllowAnonymous]
     public IActionResult Login(string? returnUrl = null) =>
         View(new LoginViewModel { ReturnUrl = returnUrl });

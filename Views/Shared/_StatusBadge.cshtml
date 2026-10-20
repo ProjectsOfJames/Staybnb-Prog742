@@ -1,0 +1,12 @@
+﻿@model string
+@{
+    var cls = (Model ?? "").ToLowerInvariant() switch
+    {
+        "approved" or "active" or "verified" or "paid" or "completed" or "read" => "sb-badge-success",
+        "pending" or "unread" or "inprogress" or "documentssubmitted" or "notstarted" => "sb-badge-warning",
+        "rejected" or "cancelled" or "failed" or "inactive" => "sb-badge-danger",
+        "checkedin" => "sb-badge-info",
+        _ => "sb-badge-neutral"
+    };
+}
+<span class="sb-badge @cls">@Model</span>
