@@ -1,0 +1,41 @@
+﻿@model List<UserRowVM>
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="sb-panel mb-3">
+    <label class="form-label small text-muted" for="userSearch">Find a user</label>
+    <input id="userSearch" type="search" class="form-control" placeholder="Search by name or email" disabled />
+    <div class="text-muted small mt-1">Search and "Promote to Admin" are wired up in Segment 6 (SuperAdmin only).</div>
+</div>
+
+<div class="sb-panel p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th class="text-end">Actions</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">@u.FullName</td>
+                        <td class="small">@u.Email</td>
+                        <td><span class="sb-badge sb-badge-neutral">@u.Role</span></td>
+                        <td class="small">@u.CreatedAt.ToString("yyyy-MM-dd")</td>
+                        <td class="text-end">
+                            @if (u.Role == "Guest")
+                            {
+                                <button class="btn btn-sm btn-outline-danger" disabled>Promote to Admin</button>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">&mdash;</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

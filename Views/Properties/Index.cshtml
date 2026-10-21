@@ -1,0 +1,57 @@
+﻿@model PropertyGalleryVM
+@{
+    ViewData["Title"] = "Explore stays";
+}
+
+<div class="bg-light border-bottom py-4">
+    <div class="container-xxl">
+        <h1 class="h3 fw-bold mb-3">Relax. Unwind. Choose your next stay.</h1>
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label small text-muted mb-1" for="city">City</label>
+                <select id="city" name="city" class="form-select">
+                    <option value="">All cities</option>
+                    @foreach (var c in Model.Cities)
+                    {
+                        <option value="@c" selected="@(Model.City == c)">@c</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label small text-muted mb-1" for="propertyType">Property type</label>
+                <select id="propertyType" name="propertyType" class="form-select">
+                    <option value="">All types</option>
+                    @foreach (var t in Model.PropertyTypes)
+                    {
+                        <option value="@t" selected="@(Model.PropertyType == t)">@t</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-auto d-flex gap-2">
+                <button type="submit" class="btn btn-danger">Search</button>
+                <a href="/Properties" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="container-xxl py-4">
+    @if (!Model.Properties.Any())
+    {
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-search fs-1"></i>
+            <p class="mt-2">No properties match those filters.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4">
+            @foreach (var p in Model.Properties)
+            {
+                <div class="col">
+                    <partial name="_PropertyCard" model="p" />
+                </div>
+            }
+        </div>
+    }
+</div>

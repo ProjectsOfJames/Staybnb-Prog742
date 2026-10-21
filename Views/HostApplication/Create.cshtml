@@ -1,0 +1,117 @@
+﻿@model HostApplicationVM
+@{
+    ViewData["Title"] = "Become a Host";
+}
+
+<div class="container py-5" style="max-width:820px">
+    <h1 class="h3 fw-bold mb-1">Become a Host</h1>
+    <p class="text-muted mb-4">Tell us about your property. An admin will review your application.</p>
+
+    @if (TempData["Info"] is string info)
+    {
+        <div class="alert alert-success">@info</div>
+    }
+
+    <form id="appForm" asp-action="Create" method="post" enctype="multipart/form-data" novalidate>
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="sb-panel mb-4">
+            <h2 class="h6 fw-bold mb-3">Property details</h2>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="Title" class="form-label"></label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Address" class="form-label"></label>
+                    <input asp-for="Address" class="form-control" />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="City" class="form-label"></label>
+                    <input asp-for="City" class="form-control" />
+                    <span asp-validation-for="City" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="PropertyType" class="form-label"></label>
+                    <select asp-for="PropertyType" asp-items="@(new SelectList(HostApplicationVM.PropertyTypes))" class="form-select"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="PricePerNight" class="form-label"></label>
+                    <input asp-for="PricePerNight" class="form-control" />
+                    <span asp-validation-for="PricePerNight" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="CleaningFee" class="form-label"></label>
+                    <input asp-for="CleaningFee" class="form-control" />
+                    <span asp-validation-for="CleaningFee" class="text-danger"></span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="MaxGuests" class="form-label"></label>
+                    <input asp-for="MaxGuests" class="form-control" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="Bedrooms" class="form-label"></label>
+                    <input asp-for="Bedrooms" class="form-control" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="Beds" class="form-label"></label>
+                    <input asp-for="Beds" class="form-control" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="Bathrooms" class="form-label"></label>
+                    <input asp-for="Bathrooms" class="form-control" />
+                </div>
+            </div>
+        </div>
+
+        <div class="sb-panel mb-4">
+            <h2 class="h6 fw-bold mb-3">Amenities</h2>
+            <div class="row row-cols-2 row-cols-md-4 g-2">
+                @foreach (var a in Model.AvailableAmenities)
+                {
+                    <div class="col">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="SelectedAmenityIds" value="@a.Id" id="am@(a.Id)"
+                                   checked="@Model.SelectedAmenityIds.Contains(a.Id)" />
+                            <label class="form-check-label" for="am@(a.Id)"><i class="bi @a.IconClass me-1"></i>@a.Name</label>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="sb-panel mb-4">
+            <h2 class="h6 fw-bold mb-1">Photos <span class="text-danger">*</span></h2>
+            <p class="text-muted small">At least one image is required. Your application cannot be submitted without one.</p>
+            <input type="file" id="Images" name="Images" class="form-control" accept="image/*" multiple />
+            <span asp-validation-for="Images" class="text-danger"></span>
+            <div id="imageError" class="text-danger small mt-1 d-none">Please upload at least one property image.</div>
+        </div>
+
+        <button type="submit" class="btn btn-danger btn-lg">Submit application</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('appForm').addEventListener('submit', function (e) {
+            var input = document.getElementById('Images');
+            var error = document.getElementById('imageError');
+            if (!input.files || input.files.length === 0) {
+                e.preventDefault();
+                error.classList.remove('d-none');
+                input.focus();
+            } else {
+                error.classList.add('d-none');
+            }
+        });
+    </script>
+}

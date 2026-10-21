@@ -1,0 +1,78 @@
+﻿@using System.Globalization
+@model AdminDashboardVM
+@{
+    ViewData["Title"] = "Dashboard Overview";
+    var rand = CultureInfo.GetCultureInfo("en-ZA");
+}
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Total Users</div><div class="sb-stat-value">@Model.TotalUsers</div><div class="small text-success">Active users</div></div></div>
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Pending Host Apps</div><div class="sb-stat-value text-warning">@Model.PendingHostApps</div><div class="small text-success">Require review</div></div></div>
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Active Properties</div><div class="sb-stat-value">@Model.ActiveProperties</div><div class="small text-success">Listings available</div></div></div>
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Platform Revenue</div><div class="sb-stat-value">@Model.PlatformRevenue.ToString("C0", rand)</div><div class="small text-success">Total earnings</div></div></div>
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Total Bookings</div><div class="sb-stat-value">@Model.TotalBookings</div><div class="small text-success">@Model.PendingBookings pending</div></div></div>
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Approved Hosts</div><div class="sb-stat-value">@Model.ApprovedHosts</div><div class="small text-success">Active hosts</div></div></div>
+</div>
+
+<div class="sb-panel mb-4 p-0 overflow-hidden">
+    <div class="p-3 fw-bold">Recent Activity</div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light"><tr><th>User</th><th>Action</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+                @foreach (var a in Model.RecentActivity)
+                {
+                    <tr>
+                        <td><div class="fw-semibold">@a.UserName</div><div class="small text-muted">@a.Email</div></td>
+                        <td class="small">@a.Action</td>
+                        <td class="small">@a.Date.ToString("yyyy-MM-dd")</td>
+                        <td><partial name="_StatusBadge" model="a.Status" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="sb-panel p-0 overflow-hidden">
+            <div class="p-3 fw-bold">Recent Host Applications</div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light"><tr><th>Applicant</th><th>Date</th><th>Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in Model.RecentApplications)
+                        {
+                            <tr>
+                                <td><div class="fw-semibold">@a.Applicant</div><div class="small text-muted">@a.PropertyTitle</div></td>
+                                <td class="small">@a.Date.ToString("yyyy-MM-dd")</td>
+                                <td><partial name="_StatusBadge" model="a.Status.ToString()" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="sb-panel p-0 overflow-hidden">
+            <div class="p-3 fw-bold">Recent Bookings</div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light"><tr><th>Guest</th><th>Dates</th><th>Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var b in Model.RecentBookings)
+                        {
+                            <tr>
+                                <td><div class="fw-semibold">@b.GuestName</div><div class="small text-muted">@b.PropertyTitle</div></td>
+                                <td class="small">@b.CheckInDate.ToString("dd MMM") &ndash; @b.CheckOutDate.ToString("dd MMM")</td>
+                                <td><partial name="_StatusBadge" model="b.Status.ToString()" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

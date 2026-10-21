@@ -1,0 +1,54 @@
+﻿@using System.Globalization
+@model HostDashboardVM
+@{
+    ViewData["Title"] = "Host Dashboard";
+    var rand = CultureInfo.GetCultureInfo("en-ZA");
+}
+
+<div class="sb-panel mb-4">
+    <h2 class="h5 fw-bold" style="color:var(--sb-primary)">Welcome back, @Model.HostName!</h2>
+    <p class="text-muted small">Here's what's happening with your properties today.</p>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="/HostApplication/Create" class="btn btn-outline-danger btn-sm"><i class="bi bi-plus-lg"></i> Add New Property</a>
+        <a href="/Host/Bookings" class="btn btn-outline-danger btn-sm"><i class="bi bi-calendar-check"></i> View Booking Requests</a>
+        <a href="/Host/Earnings" class="btn btn-outline-danger btn-sm"><i class="bi bi-graph-up"></i> View Earnings Report</a>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+    <div class="col">
+        <div class="sb-stat">
+            <div class="sb-stat-value">@Model.TotalProperties</div>
+            <div class="sb-stat-label">Total Properties</div>
+            <div class="small text-success">@Model.ActiveProperties active</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="sb-stat">
+            <div class="sb-stat-value">@Model.TotalBookings</div>
+            <div class="sb-stat-label">Total Bookings</div>
+            <div class="small text-success">@Model.BookingsThisMonth this month</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="sb-stat">
+            <div class="sb-stat-value">@Model.TotalEarnings.ToString("C0", rand)</div>
+            <div class="sb-stat-label">Total Earnings</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="sb-stat">
+            <div class="sb-stat-value">@Model.AverageRating.ToString("0.0")</div>
+            <div class="sb-stat-label">Average Rating</div>
+            <div class="small text-success">@Model.ReviewCount reviews</div>
+        </div>
+    </div>
+</div>
+
+<div class="sb-panel">
+    <h3 class="h6 fw-bold">Pending booking requests</h3>
+    <p class="mb-0">
+        You have <strong>@Model.PendingRequests</strong> request(s) waiting.
+        <a href="/Host/Bookings">Review them</a>
+    </p>
+</div>

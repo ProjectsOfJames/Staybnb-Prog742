@@ -1,0 +1,131 @@
+﻿@using System.Globalization
+@model PropertyDetailsVM
+@{
+    ViewData["Title"] = Model.Title;
+    var rand = CultureInfo.GetCultureInfo("en-ZA");
+    var inv = CultureInfo.InvariantCulture;
+    string Img(int i) => Model.ImageUrls.ElementAtOrDefault(i) ?? "";
+}
+
+<div class="container-xxl py-4">
+    <h1 class="h3 fw-bold">@Model.Title</h1>
+    <div class="text-muted mb-3">
+        <i class="bi bi-geo-alt-fill"></i> @Model.City &middot;
+        @Model.MaxGuests guests &middot; @Model.Bedrooms bedrooms &middot; @Model.Beds beds &middot; @Model.Bathrooms baths &middot;
+        <i class="bi bi-star-fill" style="color:var(--sb-primary)"></i> @Model.AverageRating.ToString("0.0") (@Model.ReviewCount reviews)
+    </div>
+
+    <div class="row g-2">
+        <div class="col-lg-8">
+            <img src="@Img(0)" alt="@Model.Title" class="w-100 rounded-3" style="height:420px;object-fit:cover" />
+        </div>
+        <div class="col-lg-4 d-none d-lg-flex flex-column gap-2">
+            <img src="@Img(1)" alt="" class="w-100 rounded-3" style="height:206px;object-fit:cover" />
+            <img src="@Img(2)" alt="" class="w-100 rounded-3" style="height:206px;object-fit:cover" />
+        </div>
+    </div>
+
+    <div class="row g-5 mt-1">
+        <div class="col-lg-7">
+            <div class="d-flex align-items-center gap-3 border-bottom pb-3 mb-3">
+                <span class="sb-avatar" style="width:48px;height:48px">@Model.HostName[0]</span>
+                <div>
+                    <div class="fw-semibold">Hosted by @Model.HostName</div>
+                    <span class="sb-badge sb-badge-danger" style="background:#ffe9ed;color:var(--sb-primary)">Verified Host</span>
+                </div>
+            </div>
+
+            <p class="lh-lg">@Model.Description</p>
+
+            <h2 class="h5 fw-bold mt-4">Amenities</h2>
+            <div class="row row-cols-2 g-3 mt-1">
+                @foreach (var a in Model.Amenities)
+                {
+                    <div class="col"><i class="bi @a.IconClass me-2"></i>@a.Name</div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="sb-panel shadow-sm sticky-top" style="top:90px">
+                <div class="fs-4 fw-bold">@Model.PricePerNight.ToString("C0", rand) <span class="fs-6 fw-normal text-muted">/ night</span></div>
+
+                <form id="bookingForm" method="post" action="/Bookings/Create" class="mt-3">
+                    <input type="hidden" name="PropertyId" value="@Model.Id" />
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small text-muted mb-1" for="checkIn">CHECK-IN</label>
+                            <input type="date" id="checkIn" name="CheckInDate" class="form-control"
+                                   value="@Model.Booking.CheckInDate.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted mb-1" for="checkOut">CHECKOUT</label>
+                            <input type="date" id="checkOut" name="CheckOutDate" class="form-control"
+                                   value="@Model.Booking.CheckOutDate.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-muted mb-1" for="guests">GUESTS (max @Model.MaxGuests)</label>
+                            <input type="number" id="guests" name="NumberOfGuests" class="form-control"
+                                   value="@Model.Booking.NumberOfGuests" min="1" max="@Model.MaxGuests" />
+                        </div>
+                    </div>
+
+                    <div class="mt-3 small">
+                        <div class="d-flex justify-content-between"><span id="nightsLabel"></span><span id="nightsAmount"></span></div>
+                        <div class="d-flex justify-content-between"><span>Cleaning fee</span><span id="cleaningAmount"></span></div>
+                        <div class="d-flex justify-content-between"><span>Service fee</span><span id="serviceAmount"></span></div>
+                        <hr />
+                        <div class="d-flex justify-content-between fw-bold fs-6"><span>Total</span><span id="totalAmount"></span></div>
+                    </div>
+
+                    <button type="button" class="btn btn-danger w-100 mt-3" disabled>Reserve</button>
+                    <div class="text-muted text-center small mt-2">Reservations are switched on in Segment 4. The price shown here is an estimate; the server recalculates it.</div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var price = @Model.PricePerNight.ToString(inv);
+            var cleaning = @Model.CleaningFee.ToString(inv);
+            var rate = @Model.ServiceFeeRate.ToString(inv);
+            var fmt = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 });
+
+            var inEl = document.getElementById('checkIn');
+            var outEl = document.getElementById('checkOut');
+
+            function update() {
+                var a = new Date(inEl.value), b = new Date(outEl.value);
+                var nights = Math.round((b - a) / 86400000);
+                if (isNaN(nights) || nights < 1) {
+                    document.getElementById('nightsLabel').textContent = 'Choose valid dates';
+                    ['nightsAmount', 'cleaningAmount', 'serviceAmount', 'totalAmount'].forEach(function (id) {
+                        document.getElementById(id).textContent = '-';
+                    });
+                    return;
+                }
+                var stay = price * nights;
+                var service = Math.round(stay * rate);
+                document.getElementById('nightsLabel').textContent = fmt.format(price) + ' x ' + nights + (nights === 1 ? ' night' : ' nights');
+                document.getElementById('nightsAmount').textContent = fmt.format(stay);
+                document.getElementById('cleaningAmount').textContent = fmt.format(cleaning);
+                document.getElementById('serviceAmount').textContent = fmt.format(service);
+                document.getElementById('totalAmount').textContent = fmt.format(stay + cleaning + service);
+            }
+
+            inEl.addEventListener('change', function () {
+                if (outEl.value <= inEl.value) {
+                    var d = new Date(inEl.value); d.setDate(d.getDate() + 1);
+                    outEl.value = d.toISOString().slice(0, 10);
+                }
+                outEl.min = inEl.value;
+                update();
+            });
+            outEl.addEventListener('change', update);
+            update();
+        })();
+    </script>
+}
