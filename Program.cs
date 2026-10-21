@@ -31,6 +31,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
+// Re-read a user's roles from the database on every request, so a role swap
+// (Guest -> Host, Guest -> Admin) takes effect straight away without a manual re-login.
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.Zero);
+
 builder.Services.AddControllersWithViews();
 
 // Application services

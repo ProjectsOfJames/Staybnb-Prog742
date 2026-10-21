@@ -1,0 +1,110 @@
+﻿@using System.Globalization
+@model ApplicationDetailsVM
+@{
+    ViewData["Title"] = "Application #" + Model.Id;
+    var rand = CultureInfo.GetCultureInfo("en-ZA");
+}
+
+<div style="max-width:980px">
+    <a href="/Admin/HostRequests" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Host requests</a>
+    <partial name="_Alerts" />
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 my-3">
+        <h2 class="h4 fw-bold mb-0">@Model.Title</h2>
+        <partial name="_StatusBadge" model="Model.Status.ToString()" />
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            @if (Model.ImageUrls.Any())
+            {
+                <div class="row g-2 mb-3">
+                    @foreach (var url in Model.ImageUrls)
+                    {
+                        <div class="col-6 col-md-4">
+                            <a href="@url" target="_blank"><img src="@url" alt="" class="w-100 rounded-3" style="height:130px;object-fit:cover" /></a>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="sb-panel mb-3">
+                <h3 class="h6 fw-bold mb-3">Property</h3>
+                <p>@Model.Description</p>
+                <div class="row small g-3">
+                    <div class="col-md-6"><div class="text-muted">Address</div><div class="fw-semibold">@Model.Address, @Model.City</div></div>
+                    <div class="col-md-3"><div class="text-muted">Type</div><div class="fw-semibold">@Model.PropertyType</div></div>
+                    <div class="col-md-3"><div class="text-muted">Price / night</div><div class="fw-semibold">@Model.PricePerNight.ToString("C0", rand)</div></div>
+                    <div class="col-md-3"><div class="text-muted">Cleaning fee</div><div class="fw-semibold">@Model.CleaningFee.ToString("C0", rand)</div></div>
+                    <div class="col-md-9">
+                        <div class="text-muted">Capacity</div>
+                        <div class="fw-semibold">@Model.MaxGuests guests &middot; @Model.Bedrooms bedrooms &middot; @Model.Beds beds &middot; @Model.Bathrooms bathrooms</div>
+                    </div>
+                </div>
+                @if (Model.Amenities.Any())
+                {
+                    <hr />
+                    <div class="d-flex flex-wrap gap-3 small">
+                        @foreach (var a in Model.Amenities)
+                        {
+                            <span><i class="bi @a.IconClass me-1"></i>@a.Name</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sb-panel mb-3">
+                <h3 class="h6 fw-bold mb-3">Applicant</h3>
+                <div class="fw-semibold">@Model.ApplicantName</div>
+                <div class="small text-muted">@Model.ApplicantEmail</div>
+                <div class="small mt-2"><span class="text-muted">Current role:</span> @Model.ApplicantRoles</div>
+                <div class="small"><span class="text-muted">Joined:</span> @Model.ApplicantJoined.ToString("dd MMM yyyy")</div>
+                <div class="small"><span class="text-muted">Applied:</span> @Model.AppliedAt.ToString("dd MMM yyyy HH:mm")</div>
+            </div>
+
+            @if (Model.Status == ApplicationStatus.Pending)
+            {
+                <div class="sb-panel mb-3">
+                    <h3 class="h6 fw-bold mb-2">Approve</h3>
+                    <p class="small text-muted">
+                        @if (Model.IsExistingHost)
+                        {
+                            <text>This user is already a Host. The new property will go live.</text>
+                        }
+                        else
+                        {
+                            <text>The user's <strong>Guest</strong> role is replaced by <strong>Host</strong> and the property goes live.</text>
+                        }
+                    </p>
+                    <form asp-action="ApproveApplication" asp-route-id="@Model.Id" method="post"
+                          onsubmit="return confirm('Approve this application?');">
+                        <button type="submit" class="btn btn-success w-100">Approve application</button>
+                    </form>
+                </div>
+
+                <div class="sb-panel">
+                    <h3 class="h6 fw-bold mb-2">Reject</h3>
+                    <form asp-action="RejectApplication" asp-route-id="@Model.Id" method="post">
+                        <label for="Reason" class="form-label small text-muted">Reason (shown to the applicant)</label>
+                        <textarea id="Reason" name="Reason" class="form-control mb-2" rows="3" minlength="5" maxlength="500" required></textarea>
+                        <button type="submit" class="btn btn-outline-danger w-100">Reject application</button>
+                    </form>
+                </div>
+            }
+            else
+            {
+                <div class="sb-panel">
+                    <h3 class="h6 fw-bold mb-2">Decision</h3>
+                    <div class="small"><span class="text-muted">Reviewed:</span> @Model.ReviewedAt?.ToString("dd MMM yyyy HH:mm")</div>
+                    <div class="small"><span class="text-muted">By:</span> @(Model.ReviewedByName ?? "Unknown")</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.RejectionReason))
+                    {
+                        <div class="small mt-2 text-danger"><span class="text-muted">Reason:</span> @Model.RejectionReason</div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

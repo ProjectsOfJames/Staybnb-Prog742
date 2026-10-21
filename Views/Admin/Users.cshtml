@@ -1,13 +1,35 @@
-﻿@model List<UserRowVM>
+﻿@model UserListVM
 @{
     ViewData["Title"] = "User Management";
+    var roles = new[] { "Guest", "Host", "Admin", "SuperAdmin" };
 }
 
-<div class="sb-panel mb-3">
-    <label class="form-label small text-muted" for="userSearch">Find a user</label>
-    <input id="userSearch" type="search" class="form-control" placeholder="Search by name or email" disabled />
-    <div class="text-muted small mt-1">Search and "Promote to Admin" are wired up in Segment 6 (SuperAdmin only).</div>
-</div>
+<partial name="_Alerts" />
+
+<form method="get" class="sb-panel mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="q">Find a user</label>
+            <input id="q" name="q" type="search" class="form-control" placeholder="Search by name or email" value="@Model.Search" />
+        </div>
+        <div class="col-6 col-md-3">
+            <label class="form-label small text-muted mb-1" for="role">Role</label>
+            <select id="role" name="role" class="form-select">
+                <option value="">All roles</option>
+                @foreach (var r in roles)
+                {
+                    <option value="@r" selected="@(Model.Role == r)">@r</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-md-auto d-flex gap-2">
+            <button type="submit" class="btn btn-danger">Search</button>
+            <a href="/Admin/Users" class="btn btn-outline-secondary">Clear</a>
+        </div>
+    </div>
+</form>
+
+<div class="text-muted small mb-2">@Model.TotalCount user(s)</div>
 
 <div class="sb-panel p-0 overflow-hidden">
     <div class="table-responsive">
@@ -16,7 +38,7 @@
                 <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th class="text-end">Actions</th></tr>
             </thead>
             <tbody>
-                @foreach (var u in Model)
+                @foreach (var u in Model.Users)
                 {
                     <tr>
                         <td class="fw-semibold">@u.FullName</td>
@@ -24,9 +46,15 @@
                         <td><span class="sb-badge sb-badge-neutral">@u.Role</span></td>
                         <td class="small">@u.CreatedAt.ToString("yyyy-MM-dd")</td>
                         <td class="text-end">
-                            @if (u.Role == "Guest")
+                            @if (u.CanPromote)
                             {
-                                <button class="btn btn-sm btn-outline-danger" disabled>Promote to Admin</button>
+                                <form asp-action="PromoteToAdmin" asp-route-id="@u.Id" method="post" class="d-inline"
+                                      onsubmit="return confirm('Promote @u.FullName to Admin?');">
+                                    <input type="hidden" name="q" value="@Model.Search" />
+                                    <input type="hidden" name="role" value="@Model.Role" />
+                                    <input type="hidden" name="page" value="@Model.Page" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Promote to Admin</button>
+                                </form>
                             }
                             else
                             {
@@ -35,7 +63,31 @@
                         </td>
                     </tr>
                 }
+                @if (!Model.Users.Any())
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">No users match.</td></tr>
+                }
             </tbody>
         </table>
     </div>
 </div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-3">
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item @(Model.Page == 1 ? "disabled" : "")">
+                <a class="page-link" href="/Admin/Users?q=@Model.Search&role=@Model.Role&page=@(Model.Page - 1)">Previous</a>
+            </li>
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.Page ? "active" : "")">
+                    <a class="page-link" href="/Admin/Users?q=@Model.Search&role=@Model.Role&page=@i">@i</a>
+                </li>
+            }
+            <li class="page-item @(Model.Page == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="/Admin/Users?q=@Model.Search&role=@Model.Role&page=@(Model.Page + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
