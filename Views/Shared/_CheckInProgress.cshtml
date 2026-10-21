@@ -1,0 +1,25 @@
+﻿@model int
+@{
+    var steps = new[] { "Rules", "Document", "Confirm" };
+}
+<ol class="list-unstyled d-flex gap-2 mb-4">
+    @for (var i = 0; i < steps.Length; i++)
+    {
+        var n = i + 1;
+        var state = n < Model ? "done" : n == Model ? "current" : "todo";
+        <li class="flex-fill text-center small">
+            <div class="mx-auto mb-1 rounded-circle d-flex align-items-center justify-content-center fw-bold @(state == "todo" ? "bg-light text-muted border" : "text-white")"
+                 style="width:32px;height:32px;@(state != "todo" ? "background:var(--sb-primary)" : "")">
+                @if (state == "done")
+                {
+                    <i class="bi bi-check-lg"></i>
+                }
+                else
+                {
+                    @n
+                }
+            </div>
+            <div class="@(state == "current" ? "fw-semibold" : "text-muted")">@steps[i]</div>
+        </li>
+    }
+</ol>

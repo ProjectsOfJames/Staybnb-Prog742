@@ -1,6 +1,4 @@
-﻿using Staybnb.Models;
-
-namespace Staybnb.ViewModels;
+﻿namespace Staybnb.ViewModels;
 
 public class AmenityVM
 {
@@ -19,6 +17,14 @@ public class PropertyGalleryVM
     public List<string> PropertyTypes { get; set; } = new();
 }
 
+public class ReviewVM
+{
+    public string ReviewerName { get; set; } = string.Empty;
+    public int Rating { get; set; }
+    public string Comment { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
+
 /// <summary>Property details page, including the booking widget.</summary>
 public class PropertyDetailsVM
 {
@@ -31,7 +37,7 @@ public class PropertyDetailsVM
 
     public decimal PricePerNight { get; set; }
     public decimal CleaningFee { get; set; }
-    public decimal ServiceFeeRate { get; set; } = 0.12m;   // matched screenshot
+    public decimal ServiceFeeRate { get; set; }
 
     public int MaxGuests { get; set; }
     public int Bedrooms { get; set; }
@@ -43,6 +49,7 @@ public class PropertyDetailsVM
 
     public List<string> ImageUrls { get; set; } = new();
     public List<AmenityVM> Amenities { get; set; } = new();
+    public List<ReviewVM> Reviews { get; set; } = new();
 
     public BookingVM Booking { get; set; } = new();
 }

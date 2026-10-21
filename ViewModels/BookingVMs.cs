@@ -34,3 +34,35 @@ public class BookingRowVM
     public decimal TotalPrice { get; set; }
     public BookingStatus Status { get; set; }
 }
+
+/// <summary>A guest's own booking, used on both "My Bookings" and the booking details page.</summary>
+public class GuestBookingVM
+{
+    public int Id { get; set; }
+    public int PropertyId { get; set; }
+    public string PropertyTitle { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public string HostName { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
+
+    public DateTime CheckInDate { get; set; }
+    public DateTime CheckOutDate { get; set; }
+    public int NumberOfGuests { get; set; }
+
+    public decimal CleaningFee { get; set; }
+    public decimal ServiceFee { get; set; }
+    public decimal TotalPrice { get; set; }
+
+    public BookingStatus Status { get; set; }
+    public CheckInStatus? CheckInStatus { get; set; }
+    public DateTime CreatedAt { get; set; }
+
+    public int Nights => (CheckOutDate.Date - CheckInDate.Date).Days;
+    public decimal StaySubtotal => TotalPrice - CleaningFee - ServiceFee;
+
+    public bool CanCancel =>
+        (Status == BookingStatus.Pending || Status == BookingStatus.Approved) && CheckInDate.Date > DateTime.Today;
+
+    public bool CanCheckIn => Status == BookingStatus.Approved;
+}

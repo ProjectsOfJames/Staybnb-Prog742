@@ -1,0 +1,64 @@
+﻿@model CheckInConfirmVM
+@{
+    ViewData["Title"] = "Check-in: confirm";
+}
+
+<div class="container py-4" style="max-width:760px">
+    <a href="/Bookings/Details/@Model.BookingId" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Back to booking</a>
+    <h1 class="h4 fw-bold mt-2">Check in to @Model.PropertyTitle</h1>
+    <partial name="_Alerts" />
+    <partial name="_CheckInProgress" model="3" />
+
+    <div class="sb-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h6 fw-bold mb-0">Review and submit</h2>
+            <partial name="_StatusBadge" model="Model.Status.ToString()" />
+        </div>
+
+        @switch (Model.Status)
+        {
+            case CheckInStatus.DocumentsSubmitted:
+                <div class="alert alert-info">Submitted. Your host will verify your document soon.</div>
+                break;
+            case CheckInStatus.Verified:
+                <div class="alert alert-success">Your identity has been verified. You're all set!</div>
+                break;
+            case CheckInStatus.Rejected:
+                <div class="alert alert-danger">The host could not verify your document. Please upload a clearer one and submit again.</div>
+                break;
+        }
+
+        @if (!Model.Documents.Any())
+        {
+            <p class="text-muted">You haven't uploaded a document yet.</p>
+        }
+        else
+        {
+            @foreach (var d in Model.Documents)
+            {
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span>@d.DocumentType</span>
+                    <span class="d-flex align-items-center gap-3">
+                        <partial name="_StatusBadge" model="d.Status.ToString()" />
+                        <a href="/CheckIn/Download/@d.Id" target="_blank" class="small">View</a>
+                    </span>
+                </div>
+            }
+        }
+
+        <div class="d-flex gap-2 mt-3">
+            @if (Model.Status == CheckInStatus.InProgress || Model.Status == CheckInStatus.Rejected)
+            {
+                <a href="/CheckIn/Upload/@Model.BookingId" class="btn btn-outline-secondary">
+                    @(Model.Documents.Any() ? "Upload another" : "Upload a document")
+                </a>
+            }
+            @if (Model.CanSubmit)
+            {
+                <form asp-action="Submit" asp-route-id="@Model.BookingId" method="post">
+                    <button type="submit" class="btn btn-danger">Submit for verification</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,46 @@
+﻿@model CheckInRulesVM
+@{
+    ViewData["Title"] = "Check-in: rules";
+}
+
+<div class="container py-4" style="max-width:760px">
+    <a href="/Bookings/Details/@Model.BookingId" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Back to booking</a>
+    <h1 class="h4 fw-bold mt-2">Check in to @Model.PropertyTitle</h1>
+    <partial name="_Alerts" />
+    <partial name="_CheckInProgress" model="1" />
+
+    <div class="sb-panel">
+        <h2 class="h6 fw-bold mb-3">@Model.ProcessTitle</h2>
+
+        @if (!Model.Steps.Any())
+        {
+            <p class="text-muted">The host hasn't listed any special rules.</p>
+        }
+        else
+        {
+            <ol class="ps-3">
+                @foreach (var s in Model.Steps)
+                {
+                    <li class="mb-3">
+                        <div class="fw-semibold">@s.Title</div>
+                        <div class="text-muted small">@s.Description</div>
+                    </li>
+                }
+            </ol>
+        }
+
+        <form asp-action="Rules" asp-route-id="@Model.BookingId" method="post" class="mt-3">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-check mb-1">
+                <input asp-for="Agree" class="form-check-input" />
+                <label asp-for="Agree" class="form-check-label"></label>
+            </div>
+            <span asp-validation-for="Agree" class="text-danger d-block mb-3"></span>
+            <button type="submit" class="btn btn-danger">Continue</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
