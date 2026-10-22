@@ -28,13 +28,15 @@ public class CheckInController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IFileStorage _files;
     private readonly INotificationService _notifications;
+    private readonly IActivityLogger _logger;
 
-    public CheckInController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications)
+    public CheckInController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications, IActivityLogger logger)
     {
         _db = db;
         _userManager = userManager;
         _files = files;
         _notifications = notifications;
+        _logger = logger;
     }
 
     // Step 1: Rules
@@ -90,6 +92,9 @@ public class CheckInController : Controller
                 CheckInProcessId = process.Id,
                 Status = CheckInStatus.InProgress
             });
+
+            _logger.Log(booking.GuestId, $"CheckInStarted: booking #{booking.Id}", ActivityType.CheckIn);
+
             await _db.SaveChangesAsync();
         }
 
@@ -155,6 +160,8 @@ public class CheckInController : Controller
             Status = DocumentStatus.Pending
         });
 
+        _logger.Log(booking.GuestId, $"DocumentUploaded: booking #{booking.Id} ({model.DocumentType})", ActivityType.CheckIn);
+
         // A re-upload after a rejection puts the check-in back in progress
         if (booking.GuestCheckIn.Status == CheckInStatus.Rejected)
             booking.GuestCheckIn.Status = CheckInStatus.InProgress;
@@ -210,6 +217,8 @@ public class CheckInController : Controller
         }
 
         checkIn.Status = CheckInStatus.DocumentsSubmitted;
+
+        _logger.Log(booking.GuestId, $"CheckInSubmitted: booking #{booking.Id}", ActivityType.CheckIn);
 
         var guest = await _userManager.GetUserAsync(User);
         var guestName = guest?.FullName ?? "A guest";

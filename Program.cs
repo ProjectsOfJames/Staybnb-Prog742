@@ -41,6 +41,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<IFileStorage, FileStorageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
 
 var app = builder.Build();
 

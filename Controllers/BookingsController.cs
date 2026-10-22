@@ -18,13 +18,15 @@ public class BookingsController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IPricingService _pricing;
     private readonly INotificationService _notifications;
+    private readonly IActivityLogger _logger;
 
-    public BookingsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IPricingService pricing, INotificationService notifications)
+    public BookingsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IPricingService pricing, INotificationService notifications, IActivityLogger logger)
     {
         _db = db;
         _userManager = userManager;
         _pricing = pricing;
         _notifications = notifications;
+        _logger = logger;
     }
 
     // My Bookings
@@ -114,6 +116,8 @@ public class BookingsController : Controller
 
         await _db.SaveChangesAsync();
 
+        await _logger.LogAsync(booking.GuestId, $"BookingRequested: #{booking.Id} {property.Title}", ActivityType.BookingStatusChange);
+
         TempData["Success"] = "Booking request sent! The host will review it shortly.";
         return RedirectToAction(nameof(Details), new { id = booking.Id });
     }
@@ -137,6 +141,8 @@ public class BookingsController : Controller
 
         var guest = await _userManager.GetUserAsync(User);
         var guestName = guest?.FullName ?? "A guest";
+        _logger.Log(booking.GuestId, $"BookingCancelled: #{booking.Id} {booking.Property.Title}", ActivityType.BookingStatusChange);
+
         _notifications.Notify(booking.Property.HostId, "Booking cancelled",
             $"{guestName} cancelled their booking for \"{booking.Property.Title}\".",
             NotificationType.Warning, "/Host/Bookings");

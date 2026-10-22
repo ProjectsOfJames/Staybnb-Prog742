@@ -118,3 +118,15 @@ public class AdminPropertyRowVM
     public string? ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+
+public class ActivityLogPageVM
+{
+    public List<ActivityRowVM> Rows { get; set; } = new();
+    public string? Search { get; set; }
+    public string? Type { get; set; }
+    public DateTime? From { get; set; }
+    public DateTime? To { get; set; }
+    public int Page { get; set; } = 1;
+    public int TotalPages { get; set; } = 1;
+    public int TotalCount { get; set; }
+}

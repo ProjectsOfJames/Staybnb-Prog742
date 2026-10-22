@@ -21,12 +21,14 @@ public class AdminController : Controller
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly INotificationService _notifications;
+    private readonly IActivityLogger _logger;
 
-    public AdminController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, INotificationService notifications)
+    public AdminController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, INotificationService notifications, IActivityLogger logger)
     {
         _db = db;
         _userManager = userManager;
         _notifications = notifications;
+        _logger = logger;
     }
 
     // Dashboard
@@ -174,10 +176,12 @@ public class AdminController : Controller
 
         // The Transition: add Host, remove Guest (a user is either a Guest or a Host, never both).
         // An existing host adding another property is already a Host, so only the application changes.
+        var becameHost = false;
         if (!await _userManager.IsInRoleAsync(user, RoleSeeder.Host))
         {
             var added = await _userManager.AddToRoleAsync(user, RoleSeeder.Host);
             if (!added.Succeeded) return RoleError(added, id);
+            becameHost = true;
         }
 
         if (await _userManager.IsInRoleAsync(user, RoleSeeder.Guest))
@@ -191,6 +195,11 @@ public class AdminController : Controller
         application.ReviewedById = _userManager.GetUserId(User);
         application.RejectionReason = null;
         application.Property.IsActive = true;   // approved listings go live
+
+        var adminId = _userManager.GetUserId(User)!;
+        if (becameHost)
+            _logger.Log(adminId, $"RoleChanged: {user.Email} Guest -> Host", ActivityType.RoleChange);
+        _logger.Log(adminId, $"HostApplicationApproved: {application.Property.Title} ({user.Email})", ActivityType.ApplicationDecision);
 
         _notifications.Notify(user.Id, "Host Application Approved",
             $"Congratulations! Your application for \"{application.Property.Title}\" was approved and is now live.",
@@ -225,6 +234,8 @@ public class AdminController : Controller
         application.RejectionReason = model.Reason.Trim();
         application.ReviewedAt = DateTime.UtcNow;
         application.ReviewedById = _userManager.GetUserId(User);
+
+        _logger.Log(_userManager.GetUserId(User)!, $"HostApplicationRejected: application #{application.Id}", ActivityType.ApplicationDecision);
 
         _notifications.Notify(application.ApplicationUserId, "Host Application Rejected",
             $"Your application was not approved. Reason: {application.RejectionReason}",
@@ -329,6 +340,8 @@ public class AdminController : Controller
             return RedirectToAction(nameof(Users), new { q, role, page });
         }
 
+        _logger.Log(_userManager.GetUserId(User)!, $"RoleChanged: {user.Email} Guest -> Admin", ActivityType.RoleChange);
+
         _notifications.Notify(user.Id, "You're now an Admin",
             "A SuperAdmin promoted your account. You now have access to the admin dashboard.",
             NotificationType.Success, "/Admin/Dashboard");
@@ -338,6 +351,74 @@ public class AdminController : Controller
 
         TempData["Success"] = $"{user.FullName} is now an Admin.";
         return RedirectToAction(nameof(Users), new { q, role, page });
+    }
+
+    // System audit
+    public async Task<IActionResult> ActivityLogs(string? q, string? type, DateTime? from, DateTime? to, int page = 1)
+    {
+        const int logPageSize = 25;
+
+        var query = _db.ActivityLogs.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var term = q.Trim();
+            query = query.Where(l => l.Action.Contains(term)
+                                  || (l.User.Email ?? "").Contains(term)
+                                  || l.User.FirstName.Contains(term)
+                                  || l.User.LastName.Contains(term));
+        }
+
+        if (Enum.TryParse<ActivityType>(type, true, out var parsedType))
+        {
+            query = query.Where(l => l.ActivityType == parsedType);
+            type = parsedType.ToString();
+        }
+        else
+        {
+            type = null;
+        }
+
+        // Dates arrive as local dates; stored timestamps are UTC
+        if (from.HasValue)
+        {
+            var start = from.Value.Date.ToUniversalTime();
+            query = query.Where(l => l.CreatedAt >= start);
+        }
+        if (to.HasValue)
+        {
+            var end = to.Value.Date.AddDays(1).ToUniversalTime();
+            query = query.Where(l => l.CreatedAt < end);
+        }
+
+        var total = await query.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)logPageSize));
+        page = Math.Clamp(page, 1, totalPages);
+
+        var rows = await query
+            .OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.Id)
+            .Skip((page - 1) * logPageSize).Take(logPageSize)
+            .Select(l => new ActivityRowVM
+            {
+                UserName = l.User.FirstName + " " + l.User.LastName,
+                Email = l.User.Email ?? string.Empty,
+                Action = l.Action,
+                Type = l.ActivityType,
+                Date = l.CreatedAt
+            })
+            .ToListAsync();
+
+        return View(new ActivityLogPageVM
+        {
+            Rows = rows,
+            Search = q,
+            Type = type,
+            From = from,
+            To = to,
+            Page = page,
+            TotalPages = totalPages,
+            TotalCount = total
+        });
     }
 
     // Read-only marketplace overview

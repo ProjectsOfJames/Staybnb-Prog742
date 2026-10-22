@@ -19,13 +19,15 @@ public class HostController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IFileStorage _files;
     private readonly INotificationService _notifications;
+    private readonly IActivityLogger _logger;
 
-    public HostController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications)
+    public HostController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications, IActivityLogger logger)
     {
         _db = db;
         _userManager = userManager;
         _files = files;
         _notifications = notifications;
+        _logger = logger;
     }
 
     private string UserId => _userManager.GetUserId(User)!;
@@ -110,6 +112,10 @@ public class HostController : Controller
         }
 
         property.IsActive = !property.IsActive;
+
+        var verb = property.IsActive ? "PropertyActivated" : "PropertyDeactivated";
+        _logger.Log(UserId, $"{verb}: {property.Title}", ActivityType.PropertyUpdate);
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = property.IsActive
@@ -177,6 +183,8 @@ public class HostController : Controller
         var chosen = await _db.Amenities.Where(a => model.SelectedAmenityIds.Contains(a.Id)).ToListAsync();
         foreach (var amenity in chosen) property.Amenities.Add(amenity);
 
+        _logger.Log(UserId, $"PropertyEdited: {property.Title}", ActivityType.PropertyUpdate);
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Property updated.";
@@ -241,6 +249,8 @@ public class HostController : Controller
 
         booking.Status = BookingStatus.Approved;
 
+        _logger.Log(UserId, $"BookingApproved: #{booking.Id} {booking.Property.Title}", ActivityType.BookingStatusChange);
+
         _notifications.Notify(booking.GuestId, "Booking Approved",
             $"Your booking for \"{booking.Property.Title}\" ({booking.CheckInDate:dd MMM} - {booking.CheckOutDate:dd MMM yyyy}) was approved. You can now complete check-in.",
             NotificationType.Success, $"/Bookings/Details/{booking.Id}");
@@ -264,6 +274,8 @@ public class HostController : Controller
         }
 
         booking.Status = BookingStatus.Rejected;
+
+        _logger.Log(UserId, $"BookingRejected: #{booking.Id} {booking.Property.Title}", ActivityType.BookingStatusChange);
 
         _notifications.Notify(booking.GuestId, "Booking Rejected",
             $"Unfortunately your request for \"{booking.Property.Title}\" was not accepted.",
@@ -335,6 +347,9 @@ public class HostController : Controller
                 : CheckInStatus.Rejected;
 
         var title = checkIn.Booking.Property.Title;
+        var docAction = approve ? "DocumentVerified" : "DocumentRejected";
+        _logger.Log(UserId, $"{docAction}: booking #{bookingId} {title}", ActivityType.CheckIn);
+
         if (approve)
             _notifications.Notify(checkIn.Booking.GuestId, "Document verified",
                 $"Your document for \"{title}\" was verified.",
@@ -366,6 +381,8 @@ public class HostController : Controller
         }
 
         booking.Status = BookingStatus.CheckedIn;
+
+        _logger.Log(UserId, $"GuestCheckedIn: #{booking.Id} {booking.Property.Title}", ActivityType.BookingStatusChange);
 
         _notifications.Notify(booking.GuestId, "You're checked in",
             $"You're checked in at \"{booking.Property.Title}\". Enjoy your stay!",
@@ -452,6 +469,8 @@ public class HostController : Controller
 
         process.Title = model.Title.Trim();
         process.StepsJson = CheckInStepsSerializer.Serialize(steps);
+
+        _logger.Log(UserId, $"CheckInRulesUpdated: {property.Title}", ActivityType.PropertyUpdate);
 
         await _db.SaveChangesAsync();
 

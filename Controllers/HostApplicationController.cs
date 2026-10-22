@@ -21,13 +21,15 @@ public class HostApplicationController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IFileStorage _files;
     private readonly INotificationService _notifications;
+    private readonly IActivityLogger _logger;
 
-    public HostApplicationController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications)
+    public HostApplicationController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications, IActivityLogger logger)
     {
         _db = db;
         _userManager = userManager;
         _files = files;
         _notifications = notifications;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -113,6 +115,8 @@ public class HostApplicationController : Controller
                 Property = property,
                 Status = ApplicationStatus.Pending
             });
+
+            _logger.Log(userId, $"HostApplicationSubmitted: {property.Title}", ActivityType.ApplicationSubmitted);
 
             var applicant = await _userManager.GetUserAsync(User);
             var applicantName = applicant?.FullName ?? "A user";

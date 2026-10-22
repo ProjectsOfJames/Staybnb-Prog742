@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Staybnb.Data;
 using Staybnb.Models;
+using Staybnb.Services;
 using Staybnb.ViewModels;
 
 namespace Staybnb.Controllers;
@@ -11,12 +12,15 @@ public class AccountController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IActivityLogger _logger;
 
     public AccountController(UserManager<ApplicationUser> userManager,
-                             SignInManager<ApplicationUser> signInManager)
+                             SignInManager<ApplicationUser> signInManager,
+                             IActivityLogger logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _logger = logger;
     }
 
     // REGISTER
@@ -46,6 +50,8 @@ public class AccountController : Controller
         // Requirement: ALL new registrants are automatically Guests
         await _userManager.AddToRoleAsync(user, RoleSeeder.Guest);
 
+        await _logger.LogAsync(user.Id, "UserRegistered", ActivityType.Registration);
+
         await _signInManager.SignInAsync(user, isPersistent: false);
         return await RedirectByRoleAsync(user);
     }
@@ -63,15 +69,23 @@ public class AccountController : Controller
         var result = await _signInManager.PasswordSignInAsync(
             model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
 
+        // Only accounts that exist can be logged against (the log is tied to a user)
+        var user = await _userManager.FindByEmailAsync(model.Email);
+
         if (result.Succeeded)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user != null)
+                await _logger.LogAsync(user.Id, "UserLoggedIn", ActivityType.Login);
 
             if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
                 return Redirect(model.ReturnUrl);
 
             return await RedirectByRoleAsync(user!);
         }
+
+        // Failed attempts and lockouts are security events worth auditing
+        if (user != null)
+            await _logger.LogAsync(user.Id, result.IsLockedOut ? "AccountLockedOut" : "LoginFailed", ActivityType.Login);
 
         ModelState.AddModelError(string.Empty,
             result.IsLockedOut ? "Account locked. Try again in a few minutes." : "Invalid email or password.");
@@ -82,6 +96,10 @@ public class AccountController : Controller
     [HttpPost, ValidateAntiForgeryToken, Authorize]
     public async Task<IActionResult> Logout()
     {
+        var userId = _userManager.GetUserId(User);
+        if (userId != null)
+            await _logger.LogAsync(userId, "UserLoggedOut", ActivityType.Logout);
+
         await _signInManager.SignOutAsync();
         return RedirectToAction(nameof(Login));
     }
