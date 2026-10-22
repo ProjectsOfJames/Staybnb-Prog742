@@ -15,7 +15,7 @@
         {
             <div class="sb-card-noimg"><i class="bi bi-image"></i></div>
         }
-        <button type="button" class="sb-heart" data-property-id="@Model.Id" aria-label="Add to wishlist">
+        <button type="button" class="sb-heart" style="z-index:3" data-property-id="@Model.Id" aria-label="Add to wishlist">
             <i class="bi @(Model.IsWishlisted ? "bi-heart-fill" : "bi-heart")"></i>
         </button>
     </div>

@@ -66,4 +66,16 @@ public class GuestBookingVM
         (Status == BookingStatus.Pending || Status == BookingStatus.Approved) && CheckInDate.Date > DateTime.Today;
 
     public bool CanCheckIn => Status == BookingStatus.Approved;
+
+    public PaymentStatus? PaymentState { get; set; }
+
+    // Payment is due once the host approves; it stays open until the guest pays
+    public bool CanPay =>
+        (Status == BookingStatus.Approved || Status == BookingStatus.CheckedIn) && PaymentState == PaymentStatus.Pending;
+
+    // Review state, set by the controller
+    public bool CanReview { get; set; }
+    public bool HasReviewed { get; set; }
+    public int? MyRating { get; set; }
+    public string? MyComment { get; set; }
 }

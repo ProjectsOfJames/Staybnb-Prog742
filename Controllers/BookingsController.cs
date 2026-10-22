@@ -17,14 +17,17 @@ public class BookingsController : Controller
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IPricingService _pricing;
+    private readonly IBookingAvailability _availability;
     private readonly INotificationService _notifications;
     private readonly IActivityLogger _logger;
 
-    public BookingsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IPricingService pricing, INotificationService notifications, IActivityLogger logger)
+    public BookingsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IPricingService pricing,
+                              IBookingAvailability availability, INotificationService notifications, IActivityLogger logger)
     {
         _db = db;
         _userManager = userManager;
         _pricing = pricing;
+        _availability = availability;
         _notifications = notifications;
         _logger = logger;
     }
@@ -49,7 +52,19 @@ public class BookingsController : Controller
         var booking = await BookingQuery().FirstOrDefaultAsync(b => b.Id == id && b.GuestId == userId);
         if (booking == null) return NotFound();
 
-        return View(ToVM(booking));
+        var vm = ToVM(booking);
+
+        // A guest can review a stay once they've checked in, and only once per property
+        var review = await _db.Reviews.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.PropertyId == booking.PropertyId && r.ReviewerId == userId);
+
+        vm.HasReviewed = review != null;
+        vm.MyRating = review?.Rating;
+        vm.MyComment = review?.Comment;
+        vm.CanReview = review == null &&
+                       (booking.Status == BookingStatus.CheckedIn || booking.Status == BookingStatus.Completed);
+
+        return View(vm);
     }
 
     // Booking engine: validates, checks availability, and prices the stay ON THE SERVER
@@ -73,17 +88,8 @@ public class BookingsController : Controller
             error = $"Stays are limited to {MaxNights} nights.";
         else if (model.NumberOfGuests < 1 || model.NumberOfGuests > property.MaxGuests)
             error = $"This property sleeps up to {property.MaxGuests} guests.";
-        else
-        {
-            // Two stays overlap when each starts before the other ends.
-            // Same-day turnover is allowed (check-out day == next check-in day).
-            var taken = await _db.Bookings.AnyAsync(b =>
-                b.PropertyId == property.Id &&
-                (b.Status == BookingStatus.Approved || b.Status == BookingStatus.CheckedIn) &&
-                b.CheckInDate < checkOut && b.CheckOutDate > checkIn);
-
-            if (taken) error = "Those dates are no longer available. Please choose different dates.";
-        }
+        else if (!await _availability.IsAvailableAsync(property.Id, checkIn, checkOut))
+            error = "Those dates are no longer available. Please choose different dates.";
 
         if (error != null)
         {
@@ -126,7 +132,10 @@ public class BookingsController : Controller
     public async Task<IActionResult> Cancel(int id)
     {
         var userId = _userManager.GetUserId(User);
-        var booking = await _db.Bookings.Include(b => b.Property).FirstOrDefaultAsync(b => b.Id == id && b.GuestId == userId);
+        var booking = await _db.Bookings
+            .Include(b => b.Property)
+            .Include(b => b.Payment)
+            .FirstOrDefaultAsync(b => b.Id == id && b.GuestId == userId);
         if (booking == null) return NotFound();
 
         var cancellable = (booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Approved)
@@ -138,6 +147,15 @@ public class BookingsController : Controller
         }
 
         booking.Status = BookingStatus.Cancelled;
+
+        // Money already paid is refunded; an unpaid invoice is simply removed
+        if (booking.Payment != null)
+        {
+            if (booking.Payment.Status == PaymentStatus.Paid)
+                booking.Payment.Status = PaymentStatus.Refunded;
+            else
+                _db.Payments.Remove(booking.Payment);
+        }
 
         var guest = await _userManager.GetUserAsync(User);
         var guestName = guest?.FullName ?? "A guest";
@@ -153,11 +171,45 @@ public class BookingsController : Controller
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    // Simulated payment: records the payment as Paid. No real card is charged.
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Pay(int id)
+    {
+        var userId = _userManager.GetUserId(User);
+        var booking = await _db.Bookings
+            .Include(b => b.Property)
+            .Include(b => b.Payment)
+            .FirstOrDefaultAsync(b => b.Id == id && b.GuestId == userId);
+        if (booking == null) return NotFound();
+
+        var payable = (booking.Status == BookingStatus.Approved || booking.Status == BookingStatus.CheckedIn)
+                      && booking.Payment != null && booking.Payment.Status == PaymentStatus.Pending;
+        if (!payable)
+        {
+            TempData["Error"] = "There is nothing to pay for this booking.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        booking.Payment!.Status = PaymentStatus.Paid;
+
+        _logger.Log(booking.GuestId, $"PaymentReceived: #{booking.Id} R {booking.Payment.Amount:0.00}", ActivityType.BookingStatusChange);
+
+        _notifications.Notify(booking.Property.HostId, "Payment received",
+            $"Payment of R {booking.Payment.Amount:0.00} for \"{booking.Property.Title}\" was received.",
+            NotificationType.Success, "/Host/Earnings");
+
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = "Payment received. Thank you!";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
     private IQueryable<Booking> BookingQuery() =>
         _db.Bookings.AsNoTracking()
             .Include(b => b.Property).ThenInclude(p => p.Images)
             .Include(b => b.Property).ThenInclude(p => p.Host)
             .Include(b => b.GuestCheckIn)
+            .Include(b => b.Payment)
             .AsSplitQuery();
 
     private static GuestBookingVM ToVM(Booking b) => new()
@@ -178,6 +230,7 @@ public class BookingsController : Controller
         TotalPrice = b.TotalPrice,
         Status = b.Status,
         CheckInStatus = b.GuestCheckIn?.Status,
+        PaymentState = b.Payment?.Status,
         CreatedAt = b.CreatedAt
     };
 }

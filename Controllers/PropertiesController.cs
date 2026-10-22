@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Staybnb.Data;
+using Staybnb.Models;
 using Staybnb.Services;
 using Staybnb.ViewModels;
 
@@ -11,8 +13,13 @@ namespace Staybnb.Controllers;
 public class PropertiesController : Controller
 {
     private readonly ApplicationDbContext _db;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public PropertiesController(ApplicationDbContext db) => _db = db;
+    public PropertiesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    {
+        _db = db;
+        _userManager = userManager;
+    }
 
     // Gallery: only ACTIVE listings, optionally filtered by city and/or property type
     public async Task<IActionResult> Index(string? city, string? propertyType)
@@ -39,6 +46,12 @@ public class PropertiesController : Controller
                 ReviewCount = p.Reviews.Count
             })
             .ToListAsync();
+
+        // Mark the cards this guest has saved (the heart shows filled)
+        var userId = _userManager.GetUserId(User);
+        var saved = await _db.WishlistItems.AsNoTracking()
+            .Where(w => w.UserId == userId).Select(w => w.PropertyId).ToListAsync();
+        foreach (var card in cards) card.IsWishlisted = saved.Contains(card.Id);
 
         var vm = new PropertyGalleryVM
         {

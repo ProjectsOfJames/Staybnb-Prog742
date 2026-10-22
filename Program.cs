@@ -39,6 +39,7 @@ builder.Services.AddControllersWithViews();
 
 // Application services
 builder.Services.AddScoped<IPricingService, PricingService>();
+builder.Services.AddScoped<IBookingAvailability, BookingAvailabilityService>();
 builder.Services.AddScoped<IFileStorage, FileStorageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
@@ -55,9 +56,12 @@ using (var scope = app.Services.CreateScope())
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
+    app.UseExceptionHandler("/Error/500");
     app.UseHsts();
 }
+
+// Friendly pages for 404s and other error status codes
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -66,8 +70,15 @@ app.UseRouting();
 app.UseAuthentication();   // must come before UseAuthorization
 app.UseAuthorization();
 
+// The site root opens the login page
+app.MapControllerRoute(
+    name: "root",
+    pattern: "",
+    defaults: new { controller = "Account", action = "Login" });
+
+// Every other address: /Controller/Action/id, and /Controller alone opens that controller's Index
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Account}/{action=Login}/{id?}");
+    pattern: "{controller}/{action=Index}/{id?}");
 
 app.Run();

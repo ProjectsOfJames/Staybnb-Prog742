@@ -84,7 +84,7 @@ public class HostApplicationController : Controller
         try
         {
             foreach (var file in files)
-                savedUrls.Add(await _files.SavePublicAsync(file, "properties", ImageExtensions, MaxImageBytes));
+                savedUrls.Add(await _files.SavePublicAsync(file, StorageFolders.PropertyImages, ImageExtensions, MaxImageBytes));
 
             var amenities = await _db.Amenities
                 .Where(a => model.SelectedAmenityIds.Contains(a.Id))

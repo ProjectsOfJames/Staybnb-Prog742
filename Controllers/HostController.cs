@@ -13,21 +13,24 @@ namespace Staybnb.Controllers;
 [Authorize(Roles = "Host")]
 public class HostController : Controller
 {
-    private const string DocFolder = "guest-documents";   // must match CheckInController
+    private const string DocFolder = StorageFolders.GuestDocuments;
 
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IFileStorage _files;
     private readonly INotificationService _notifications;
     private readonly IActivityLogger _logger;
+    private readonly IBookingAvailability _availability;
 
-    public HostController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications, IActivityLogger logger)
+    public HostController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files,
+                          INotificationService notifications, IActivityLogger logger, IBookingAvailability availability)
     {
         _db = db;
         _userManager = userManager;
         _files = files;
         _notifications = notifications;
         _logger = logger;
+        _availability = availability;
     }
 
     private string UserId => _userManager.GetUserId(User)!;
@@ -51,9 +54,9 @@ public class HostController : Controller
             TotalBookings = await bookings.CountAsync(),
             BookingsThisMonth = await bookings.CountAsync(b => b.CreatedAt >= monthStart),
             PendingRequests = await bookings.CountAsync(b => b.Status == BookingStatus.Pending),
-            // Earnings = what the host receives (the guest's total minus the platform's service fee)
+            // Earnings = what the host receives (the guest's total minus the platform's service fee), once PAID
             TotalEarnings = await bookings
-                .Where(b => b.Status == BookingStatus.Approved || b.Status == BookingStatus.CheckedIn || b.Status == BookingStatus.Completed)
+                .Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Paid)
                 .SumAsync(b => (decimal?)(b.TotalPrice - b.ServiceFee)) ?? 0,
             ReviewCount = await reviews.CountAsync()
         };
@@ -233,13 +236,7 @@ public class HostController : Controller
         }
 
         // Never approve two stays that overlap (same-day turnover is fine)
-        var checkIn = booking.CheckInDate;
-        var checkOut = booking.CheckOutDate;
-        var conflict = await _db.Bookings.AnyAsync(o =>
-            o.Id != booking.Id &&
-            o.PropertyId == booking.PropertyId &&
-            (o.Status == BookingStatus.Approved || o.Status == BookingStatus.CheckedIn) &&
-            o.CheckInDate < checkOut && o.CheckOutDate > checkIn);
+        var conflict = !await _availability.IsAvailableAsync(booking.PropertyId, booking.CheckInDate, booking.CheckOutDate, booking.Id);
 
         if (conflict)
         {
@@ -248,6 +245,10 @@ public class HostController : Controller
         }
 
         booking.Status = BookingStatus.Approved;
+
+        // Approval raises the invoice; the guest pays from their booking page
+        if (!await _db.Payments.AnyAsync(p => p.BookingId == booking.Id))
+            _db.Payments.Add(new Payment { BookingId = booking.Id, Amount = booking.TotalPrice, Status = PaymentStatus.Pending });
 
         _logger.Log(UserId, $"BookingApproved: #{booking.Id} {booking.Property.Title}", ActivityType.BookingStatusChange);
 
@@ -476,6 +477,65 @@ public class HostController : Controller
 
         TempData["Success"] = "Check-in process saved.";
         return RedirectToAction(nameof(Properties));
+    }
+
+    // Earnings
+    public async Task<IActionResult> Earnings()
+    {
+        var uid = UserId;
+
+        var rows = await _db.Bookings.AsNoTracking()
+            .Where(b => b.Property.HostId == uid &&
+                        (b.Status == BookingStatus.Approved || b.Status == BookingStatus.CheckedIn || b.Status == BookingStatus.Completed))
+            .OrderByDescending(b => b.CreatedAt)
+            .Select(b => new HostEarningRowVM
+            {
+                BookingId = b.Id,
+                PropertyTitle = b.Property.Title,
+                GuestName = b.Guest.FirstName + " " + b.Guest.LastName,
+                CheckInDate = b.CheckInDate,
+                CheckOutDate = b.CheckOutDate,
+                Earning = b.TotalPrice - b.ServiceFee,
+                BookingStatus = b.Status,
+                PaymentState = b.Payment == null ? (PaymentStatus?)null : b.Payment.Status
+            })
+            .ToListAsync();
+
+        var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var paid = rows.Where(r => r.PaymentState == PaymentStatus.Paid).ToList();
+
+        return View(new HostEarningsVM
+        {
+            TotalEarned = paid.Sum(r => r.Earning),
+            EarnedThisMonth = paid.Where(r => r.CheckInDate >= monthStart).Sum(r => r.Earning),
+            AwaitingPayment = rows.Where(r => r.PaymentState != PaymentStatus.Paid).Sum(r => r.Earning),
+            Rows = rows
+        });
+    }
+
+    // Reviews
+    public async Task<IActionResult> Reviews()
+    {
+        var uid = UserId;
+
+        var rows = await _db.Reviews.AsNoTracking()
+            .Where(r => r.Property.HostId == uid)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new HostReviewRowVM
+            {
+                PropertyTitle = r.Property.Title,
+                ReviewerName = r.Reviewer.FirstName + " " + r.Reviewer.LastName,
+                Rating = r.Rating,
+                Comment = r.Comment,
+                CreatedAt = r.CreatedAt
+            })
+            .ToListAsync();
+
+        return View(new HostReviewsVM
+        {
+            Average = rows.Any() ? rows.Average(r => r.Rating) : 0,
+            Rows = rows
+        });
     }
 
     // Helpers

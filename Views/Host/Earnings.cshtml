@@ -1,0 +1,42 @@
+﻿@using System.Globalization
+@model HostEarningsVM
+@{
+    ViewData["Title"] = "Earnings";
+    var rand = CultureInfo.GetCultureInfo("en-ZA");
+}
+
+<div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Total earned (paid)</div><div class="sb-stat-value">@Model.TotalEarned.ToString("C0", rand)</div></div></div>
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Earned this month</div><div class="sb-stat-value">@Model.EarnedThisMonth.ToString("C0", rand)</div></div></div>
+    <div class="col"><div class="sb-stat"><div class="sb-stat-label">Awaiting payment</div><div class="sb-stat-value text-warning">@Model.AwaitingPayment.ToString("C0", rand)</div></div></div>
+</div>
+
+<div class="text-muted small mb-2">Earnings are the guest's total minus the platform service fee.</div>
+
+<div class="sb-panel p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr><th>#</th><th>Property</th><th>Guest</th><th>Dates</th><th>You earn</th><th>Booking</th><th>Payment</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    <tr>
+                        <td class="small text-muted">@r.BookingId</td>
+                        <td>@r.PropertyTitle</td>
+                        <td>@r.GuestName</td>
+                        <td class="small">@r.CheckInDate.ToString("dd MMM") &ndash; @r.CheckOutDate.ToString("dd MMM yyyy")</td>
+                        <td>@r.Earning.ToString("C0", rand)</td>
+                        <td><partial name="_StatusBadge" model="r.BookingStatus.ToString()" /></td>
+                        <td><partial name="_StatusBadge" model='(r.PaymentState?.ToString() ?? "Pending")' /></td>
+                    </tr>
+                }
+                @if (!Model.Rows.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">No confirmed bookings yet.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

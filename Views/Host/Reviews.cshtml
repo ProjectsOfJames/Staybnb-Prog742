@@ -1,0 +1,47 @@
+﻿@model HostReviewsVM
+@{
+    ViewData["Title"] = "Reviews";
+}
+
+<div class="sb-panel mb-3">
+    <div class="d-flex align-items-center gap-3">
+        <div class="display-6 fw-bold">@Model.Average.ToString("0.0")</div>
+        <div>
+            <div style="color:var(--sb-primary)">
+                @for (var s = 1; s <= 5; s++)
+                {
+                    <i class="bi @(s <= Math.Round(Model.Average) ? "bi-star-fill" : "bi-star")"></i>
+                }
+            </div>
+            <div class="small text-muted">@Model.Rows.Count review(s)</div>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Rows.Any())
+{
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-star fs-1"></i>
+        <p class="mt-2">No reviews yet.</p>
+    </div>
+}
+
+@foreach (var r in Model.Rows)
+{
+    <div class="sb-panel mb-2">
+        <div class="d-flex justify-content-between flex-wrap">
+            <span class="fw-semibold">@r.ReviewerName <span class="text-muted fw-normal small">on @r.PropertyTitle</span></span>
+            <span class="small text-muted">@r.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</span>
+        </div>
+        <div style="color:var(--sb-primary)">
+            @for (var s = 1; s <= 5; s++)
+            {
+                <i class="bi @(s <= r.Rating ? "bi-star-fill" : "bi-star")"></i>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(r.Comment))
+        {
+            <p class="mb-0 mt-1">@r.Comment</p>
+        }
+    </div>
+}

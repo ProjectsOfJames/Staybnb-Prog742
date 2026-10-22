@@ -174,3 +174,38 @@ public class CheckInConfigVM
 
     public List<CheckInStepDto> Steps { get; set; } = new();
 }
+
+public class HostEarningRowVM
+{
+    public int BookingId { get; set; }
+    public string PropertyTitle { get; set; } = string.Empty;
+    public string GuestName { get; set; } = string.Empty;
+    public DateTime CheckInDate { get; set; }
+    public DateTime CheckOutDate { get; set; }
+    public decimal Earning { get; set; }          // guest total minus the platform service fee
+    public BookingStatus BookingStatus { get; set; }
+    public PaymentStatus? PaymentState { get; set; }
+}
+
+public class HostEarningsVM
+{
+    public decimal TotalEarned { get; set; }       // paid bookings
+    public decimal EarnedThisMonth { get; set; }
+    public decimal AwaitingPayment { get; set; }   // approved but not yet paid
+    public List<HostEarningRowVM> Rows { get; set; } = new();
+}
+
+public class HostReviewRowVM
+{
+    public string PropertyTitle { get; set; } = string.Empty;
+    public string ReviewerName { get; set; } = string.Empty;
+    public int Rating { get; set; }
+    public string Comment { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
+
+public class HostReviewsVM
+{
+    public double Average { get; set; }
+    public List<HostReviewRowVM> Rows { get; set; } = new();
+}

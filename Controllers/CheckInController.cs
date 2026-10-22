@@ -19,7 +19,7 @@ namespace Staybnb.Controllers;
 [Authorize(Roles = "Guest")]
 public class CheckInController : Controller
 {
-    private const string DocFolder = "guest-documents";
+    private const string DocFolder = StorageFolders.GuestDocuments;
     private const long MaxBytes = 5 * 1024 * 1024;
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".pdf" };
     private static readonly string[] DocumentTypes = { "ID", "Passport" };

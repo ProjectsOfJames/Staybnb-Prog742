@@ -34,8 +34,9 @@ public class AdminController : Controller
     // Dashboard
     public async Task<IActionResult> Dashboard()
     {
-        var confirmed = _db.Bookings.AsNoTracking().Where(b =>
-            b.Status == BookingStatus.Approved || b.Status == BookingStatus.CheckedIn || b.Status == BookingStatus.Completed);
+        // Revenue only counts bookings that have actually been paid
+        var confirmed = _db.Bookings.AsNoTracking()
+            .Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Paid);
 
         var vm = new AdminDashboardVM
         {
