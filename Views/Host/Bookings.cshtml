@@ -1,56 +1,75 @@
 ﻿@using System.Globalization
-@model List<BookingRowVM>
+@model List<HostBookingRowVM>
 @{
     ViewData["Title"] = "Booking Requests";
     var rand = CultureInfo.GetCultureInfo("en-ZA");
 }
 
-<div class="sb-panel p-0 overflow-hidden">
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Guest</th>
-                    <th>Property</th>
-                    <th>Dates</th>
-                    <th>Guests</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var b in Model)
-                {
-                    <tr>
-                        <td>
-                            <div class="fw-semibold">@b.GuestName</div>
-                            <div class="small text-muted">@b.GuestEmail</div>
-                        </td>
-                        <td>@b.PropertyTitle</td>
-                        <td class="small">@b.CheckInDate.ToString("dd MMM") &ndash; @b.CheckOutDate.ToString("dd MMM yyyy")</td>
-                        <td>@b.NumberOfGuests</td>
-                        <td>@b.TotalPrice.ToString("C0", rand)</td>
-                        <td><partial name="_StatusBadge" model="b.Status.ToString()" /></td>
-                        <td class="text-end">
-                            @if (b.Status == BookingStatus.Pending)
-                            {
-                                <button class="btn btn-sm btn-success" disabled>Approve</button>
-                                <button class="btn btn-sm btn-outline-danger" disabled>Reject</button>
-                            }
-                            else if (b.Status == BookingStatus.Approved || b.Status == BookingStatus.CheckedIn)
-                            {
-                                <button class="btn btn-sm btn-outline-secondary" disabled>Check-in documents</button>
-                            }
-                            else
-                            {
-                                <span class="text-muted small">&mdash;</span>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+<partial name="_Alerts" />
+
+@if (!Model.Any())
+{
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-calendar-x fs-1"></i>
+        <p class="mt-2">No booking requests yet.</p>
     </div>
-</div>
-<div class="text-muted small mt-2">Approve / Reject and document verification are wired up in Segment 5.</div>
+}
+else
+{
+    <div class="sb-panel p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Guest</th>
+                        <th>Property</th>
+                        <th>Dates</th>
+                        <th>Guests</th>
+                        <th>You earn</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var b in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">@b.GuestName</div>
+                                <div class="small text-muted">@b.GuestEmail</div>
+                            </td>
+                            <td>@b.PropertyTitle</td>
+                            <td class="small">@b.CheckInDate.ToString("dd MMM") &ndash; @b.CheckOutDate.ToString("dd MMM yyyy")</td>
+                            <td>@b.NumberOfGuests</td>
+                            <td>@b.HostEarning.ToString("C0", rand)</td>
+                            <td>
+                                <partial name="_StatusBadge" model="b.Status.ToString()" />
+                                @if (b.GuestCheckInStatus.HasValue)
+                                {
+                                    <div class="mt-1 small text-muted">Check-in: <partial name="_StatusBadge" model="b.GuestCheckInStatus.Value.ToString()" /></div>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a href="/Messages/Conversation/@b.GuestId" class="btn btn-sm btn-outline-secondary" title="Message guest"><i class="bi bi-chat-dots"></i></a>
+                                @if (b.Status == BookingStatus.Pending)
+                                {
+                                    <form asp-action="ApproveBooking" asp-route-id="@b.Id" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                    </form>
+                                    <form asp-action="RejectBooking" asp-route-id="@b.Id" method="post" class="d-inline"
+                                          onsubmit="return confirm('Reject this booking request?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                                    </form>
+                                }
+                                else if (b.Status == BookingStatus.Approved || b.Status == BookingStatus.CheckedIn)
+                                {
+                                    <a href="/Host/VerifyCheckIn/@b.Id" class="btn btn-sm btn-outline-secondary">Check-in</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

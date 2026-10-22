@@ -25,7 +25,10 @@
                     <div class="col-6"><div class="text-muted">Check-in</div><div class="fw-semibold">@Model.CheckInDate.ToString("ddd, dd MMM yyyy")</div></div>
                     <div class="col-6"><div class="text-muted">Checkout</div><div class="fw-semibold">@Model.CheckOutDate.ToString("ddd, dd MMM yyyy")</div></div>
                     <div class="col-6"><div class="text-muted">Guests</div><div class="fw-semibold">@Model.NumberOfGuests</div></div>
-                    <div class="col-6"><div class="text-muted">Host</div><div class="fw-semibold">@Model.HostName</div></div>
+                    <div class="col-6">
+                        <div class="text-muted">Host</div>
+                        <div class="fw-semibold">@Model.HostName <a href="/Messages/Conversation/@Model.HostId" class="small ms-1">Message</a></div>
+                    </div>
                     <div class="col-12"><div class="text-muted">Address</div><div class="fw-semibold">@Model.Address, @Model.City</div></div>
                 </div>
             </div>

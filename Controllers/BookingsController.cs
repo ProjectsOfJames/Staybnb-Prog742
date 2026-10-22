@@ -146,6 +146,7 @@ public class BookingsController : Controller
         City = b.Property.City,
         Address = b.Property.Address,
         HostName = b.Property.Host.FullName,
+        HostId = b.Property.HostId,
         ImageUrl = b.Property.Images.Select(i => i.ImageUrl).FirstOrDefault(),
         CheckInDate = b.CheckInDate,
         CheckOutDate = b.CheckOutDate,

@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Staybnb.Data;
-using Staybnb.Models;
 using Staybnb.Services;
 using Staybnb.ViewModels;
 
@@ -73,6 +72,7 @@ public class PropertiesController : Controller
             Address = p.Address,
             Description = p.Description,
             HostName = p.Host.FullName,
+            HostId = p.HostId,
             PricePerNight = p.PricePerNight,
             CleaningFee = p.CleaningFee,
             ServiceFeeRate = PricingService.ServiceFeeRate,

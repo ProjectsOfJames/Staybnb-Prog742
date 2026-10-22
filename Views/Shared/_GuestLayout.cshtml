@@ -25,6 +25,7 @@
                     {
                         <a class="sb-toplink d-none d-lg-inline" href="/HostApplication/Status">Host Application Status</a>
                         <a class="sb-toplink d-none d-lg-inline" href="/HostApplication/Create">Become a Host</a>
+                        @await Component.InvokeAsync("UnreadMessages")
                         <partial name="_NotificationBell" model="@(0)" />
                     }
                     <partial name="_UserMenu" />

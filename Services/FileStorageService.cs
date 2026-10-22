@@ -2,51 +2,95 @@
 
 public interface IFileStorage
 {
-    /// <summary>Validates and saves an upload. Returns the stored file name. Throws InvalidOperationException with a user-friendly message if invalid.</summary>
+    /// <summary>Returns a user-friendly error message, or null when the file is acceptable.</summary>
+    string? Validate(IFormFile? file, string[] allowedExtensions, long maxBytes);
+
+    /// <summary>Saves a PRIVATE file (outside wwwroot). Returns the stored file name. Throws InvalidOperationException if invalid.</summary>
     Task<string> SaveAsync(IFormFile file, string folder, string[] allowedExtensions, long maxBytes);
+
+    /// <summary>Saves a PUBLIC file under wwwroot/uploads/{folder}. Returns its URL, e.g. /uploads/properties/abc.jpg.</summary>
+    Task<string> SavePublicAsync(IFormFile file, string folder, string[] allowedExtensions, long maxBytes);
+
+    /// <summary>Removes a file previously saved with SavePublicAsync (used to clean up after a failed save).</summary>
+    void DeletePublic(string url);
 
     string GetPhysicalPath(string folder, string fileName);
 }
 
 /// <summary>
-/// Saves uploads OUTSIDE wwwroot (App_Data/uploads/...), so private files such as IDs and passports
-/// are never reachable by guessing a URL. They are served only through authorised controller actions.
+/// Private files (IDs, passports) go to App_Data/uploads and are only served through authorised actions.
+/// Public files (property photos) go to wwwroot/uploads so the gallery can display them.
 /// </summary>
 public class FileStorageService : IFileStorage
 {
-    private readonly string _root;
+    private readonly string _privateRoot;
+    private readonly string _publicRoot;
 
     public FileStorageService(IWebHostEnvironment env)
     {
-        _root = Path.Combine(env.ContentRootPath, "App_Data", "uploads");
+        _privateRoot = Path.Combine(env.ContentRootPath, "App_Data", "uploads");
+        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
+        _publicRoot = Path.Combine(webRoot, "uploads");
+    }
+
+    public string? Validate(IFormFile? file, string[] allowedExtensions, long maxBytes)
+    {
+        if (file == null || file.Length == 0)
+            return "Please choose a file to upload.";
+
+        if (file.Length > maxBytes)
+            return $"The file is too large (maximum {maxBytes / 1024 / 1024} MB).";
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!allowedExtensions.Contains(ext))
+            return $"Only these file types are allowed: {string.Join(", ", allowedExtensions)}.";
+
+        return null;
     }
 
     public async Task<string> SaveAsync(IFormFile file, string folder, string[] allowedExtensions, long maxBytes)
     {
-        if (file == null || file.Length == 0)
-            throw new InvalidOperationException("Please choose a file to upload.");
+        return await WriteAsync(file, Path.Combine(_privateRoot, folder), allowedExtensions, maxBytes);
+    }
 
-        if (file.Length > maxBytes)
-            throw new InvalidOperationException($"The file is too large (maximum {maxBytes / 1024 / 1024} MB).");
+    public async Task<string> SavePublicAsync(IFormFile file, string folder, string[] allowedExtensions, long maxBytes)
+    {
+        var name = await WriteAsync(file, Path.Combine(_publicRoot, folder), allowedExtensions, maxBytes);
+        return $"/uploads/{folder}/{name}";
+    }
 
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!allowedExtensions.Contains(ext))
-            throw new InvalidOperationException($"Only these file types are allowed: {string.Join(", ", allowedExtensions)}.");
+    public void DeletePublic(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+            return;
 
-        var dir = Path.Combine(_root, folder);
-        Directory.CreateDirectory(dir);
+        var relative = url.Substring("/uploads/".Length).Replace('/', Path.DirectorySeparatorChar);
+        var full = Path.GetFullPath(Path.Combine(_publicRoot, relative));
 
-        // Never use the client's file name: a random name prevents overwrites and path tricks.
-        var storedName = $"{Guid.NewGuid():N}{ext}";
-        await using var stream = File.Create(Path.Combine(dir, storedName));
-        await file.CopyToAsync(stream);
+        // Only ever delete inside the uploads folder
+        if (!full.StartsWith(Path.GetFullPath(_publicRoot), StringComparison.OrdinalIgnoreCase)) return;
 
-        return storedName;
+        if (File.Exists(full)) File.Delete(full);
     }
 
     public string GetPhysicalPath(string folder, string fileName)
     {
         // GetFileName strips any directory part, blocking "../" traversal
-        return Path.Combine(_root, folder, Path.GetFileName(fileName));
+        return Path.Combine(_privateRoot, folder, Path.GetFileName(fileName));
+    }
+
+    private async Task<string> WriteAsync(IFormFile file, string directory, string[] allowedExtensions, long maxBytes)
+    {
+        var error = Validate(file, allowedExtensions, maxBytes);
+        if (error != null) throw new InvalidOperationException(error);
+
+        Directory.CreateDirectory(directory);
+
+        // Never use the client's file name: a random name prevents overwrites and path tricks.
+        var storedName = $"{Guid.NewGuid():N}{Path.GetExtension(file.FileName).ToLowerInvariant()}";
+        await using var stream = File.Create(Path.Combine(directory, storedName));
+        await file.CopyToAsync(stream);
+
+        return storedName;
     }
 }

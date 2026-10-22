@@ -3,7 +3,7 @@ using Staybnb.Models;
 
 namespace Staybnb.ViewModels;
 
-/// <summary>What the guest submits from the booking widget. Prices are never taken from the client.</summary>
+/// <summary>What the guest submits from the booking widget. Prices are NEVER taken from the client.</summary>
 public class BookingVM
 {
     public int PropertyId { get; set; }
@@ -21,7 +21,7 @@ public class BookingVM
     public int NumberOfGuests { get; set; } = 1;
 }
 
-/// <summary>One row in a booking list (host booking requests, admin recent bookings, guest bookings).</summary>
+/// <summary>One row in a booking list (host booking requests, admin recent bookings).</summary>
 public class BookingRowVM
 {
     public int Id { get; set; }
@@ -44,6 +44,7 @@ public class GuestBookingVM
     public string City { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string HostName { get; set; } = string.Empty;
+    public string HostId { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
 
     public DateTime CheckInDate { get; set; }

@@ -34,6 +34,7 @@ public class PropertyDetailsVM
     public string Address { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string HostName { get; set; } = string.Empty;
+    public string HostId { get; set; } = string.Empty;
 
     public decimal PricePerNight { get; set; }
     public decimal CleaningFee { get; set; }
