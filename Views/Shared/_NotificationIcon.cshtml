@@ -1,0 +1,14 @@
+﻿@model NotificationType
+@{
+    var (icon, bg, fg) = Model switch
+    {
+        NotificationType.Success => ("bi-check-circle-fill", "#e3f6e8", "#1a7f37"),
+        NotificationType.Warning => ("bi-exclamation-triangle-fill", "#fff3d6", "#9a6700"),
+        NotificationType.BookingUpdate => ("bi-calendar-check-fill", "#ddeeff", "#0969da"),
+        NotificationType.NewMessage => ("bi-chat-dots-fill", "#ffe9ed", "#ff385c"),
+        NotificationType.ApplicationUpdate => ("bi-file-earmark-check-fill", "#f0e6ff", "#6f42c1"),
+        _ => ("bi-info-circle-fill", "#eeeeee", "#555555")
+    };
+}
+<span class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+      style="width:34px;height:34px;background:@bg;color:@fg"><i class="bi @icon"></i></span>

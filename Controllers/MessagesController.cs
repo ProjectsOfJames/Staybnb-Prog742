@@ -20,11 +20,13 @@ public class MessagesController : Controller
 
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly INotificationService _notifications;
 
-    public MessagesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    public MessagesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, INotificationService notifications)
     {
         _db = db;
         _userManager = userManager;
+        _notifications = notifications;
     }
 
     private string UserId => _userManager.GetUserId(User)!;
@@ -82,7 +84,7 @@ public class MessagesController : Controller
         return View(rows);
     }
 
-    // One conversation
+    // One conversation 
     [HttpGet]
     public async Task<IActionResult> Conversation(string id)
     {
@@ -103,6 +105,12 @@ public class MessagesController : Controller
         await _db.Messages
             .Where(m => m.SenderId == id && m.ReceiverId == me && !m.IsRead)
             .ExecuteUpdateAsync(s => s.SetProperty(m => m.IsRead, true));
+
+        // ...and clears the matching "New message" notification
+        var conversationLink = $"/Messages/Conversation/{id}";
+        await _db.Notifications
+            .Where(n => n.UserId == me && n.Type == NotificationType.NewMessage && !n.IsRead && n.LinkUrl == conversationLink)
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true));
 
         var roles = await RoleLabels.HighestRolesAsync(_db, new[] { id });
 
@@ -144,6 +152,19 @@ public class MessagesController : Controller
             ReceiverId = id,
             Content = text
         });
+
+        // One "New message" notification per conversation until the recipient opens it (no spam)
+        var link = $"/Messages/Conversation/{me}";
+        var alreadyNotified = await _db.Notifications.AnyAsync(n =>
+            n.UserId == id && n.Type == NotificationType.NewMessage && !n.IsRead && n.LinkUrl == link);
+
+        if (!alreadyNotified)
+        {
+            var sender = await _userManager.GetUserAsync(User);
+            _notifications.Notify(id, "New message", $"{sender?.FullName ?? "Someone"} sent you a message.",
+                NotificationType.NewMessage, link);
+        }
+
         await _db.SaveChangesAsync();
 
         return RedirectToAction(nameof(Conversation), new { id });

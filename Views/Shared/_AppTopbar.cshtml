@@ -5,7 +5,7 @@
     <h1 class="sb-page-title">@ViewData["Title"]</h1>
     <div class="d-flex align-items-center gap-2">
         @await Component.InvokeAsync("UnreadMessages")
-        <partial name="_NotificationBell" model="@(0)" />
+        @await Component.InvokeAsync("NotificationBell")
         <partial name="_UserMenu" />
     </div>
 </header>

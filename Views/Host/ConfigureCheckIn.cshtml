@@ -1,0 +1,91 @@
+﻿@model CheckInConfigVM
+@{
+    ViewData["Title"] = "Check-in rules";
+}
+
+<div style="max-width:820px">
+    <a href="/Host/Properties" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> My properties</a>
+    <partial name="_Alerts" />
+
+    <h2 class="h5 fw-bold mt-2">@Model.PropertyTitle</h2>
+    <p class="text-muted small">Guests read and accept these rules before uploading their ID. Add, edit or remove rules as you like.</p>
+
+    <form id="cfgForm" asp-action="ConfigureCheckIn" asp-route-id="@Model.PropertyId" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="sb-panel mb-3">
+            <label asp-for="Title" class="form-label"></label>
+            <input asp-for="Title" class="form-control" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+
+        <div id="rows">
+            @foreach (var s in Model.Steps)
+            {
+                <div class="step-row sb-panel mb-2">
+                    <div class="d-flex gap-2">
+                        <div class="flex-grow-1">
+                            <input data-f="title" class="form-control mb-2" placeholder="Rule or step title" value="@s.Title" />
+                            <textarea data-f="desc" class="form-control" rows="2" placeholder="Details">@s.Description</textarea>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger btn-sm align-self-start" data-remove title="Remove">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <template id="rowTemplate">
+            <div class="step-row sb-panel mb-2">
+                <div class="d-flex gap-2">
+                    <div class="flex-grow-1">
+                        <input data-f="title" class="form-control mb-2" placeholder="Rule or step title" />
+                        <textarea data-f="desc" class="form-control" rows="2" placeholder="Details"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm align-self-start" data-remove title="Remove">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <button type="button" id="addRow" class="btn btn-outline-secondary btn-sm mb-3"><i class="bi bi-plus-lg"></i> Add rule</button>
+        <div>
+            <button type="submit" class="btn btn-danger">Save check-in rules</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var rows = document.getElementById('rows');
+            var tpl = document.getElementById('rowTemplate');
+
+            document.getElementById('addRow').addEventListener('click', function () {
+                rows.appendChild(tpl.content.cloneNode(true));
+            });
+
+            rows.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-remove]');
+                if (btn) btn.closest('.step-row').remove();
+            });
+
+            // Before submitting: drop blank rows and number the rest so the server can bind them
+            document.getElementById('cfgForm').addEventListener('submit', function () {
+                var list = Array.prototype.slice.call(rows.querySelectorAll('.step-row'));
+                var index = 0;
+                list.forEach(function (row) {
+                    var title = row.querySelector('[data-f="title"]');
+                    var desc = row.querySelector('[data-f="desc"]');
+                    if (!title.value.trim()) { row.remove(); return; }
+                    title.name = 'Steps[' + index + '].Title';
+                    desc.name = 'Steps[' + index + '].Description';
+                    index++;
+                });
+            });
+        })();
+    </script>
+}

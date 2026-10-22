@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -25,30 +24,17 @@ public class CheckInController : Controller
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".pdf" };
     private static readonly string[] DocumentTypes = { "ID", "Passport" };
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    // Used until the host configures their own check-in process
-    private static readonly List<CheckInStepDto> DefaultSteps = new()
-    {
-        new() { Title = "Respect the property", Description = "Keep noise down between 22:00 and 07:00 and treat the home with care." },
-        new() { Title = "Guests and visitors", Description = "Only the guests on your booking may stay overnight. No parties or events." },
-        new() { Title = "Check-in and check-out times", Description = "Check in from 14:00 and check out by 10:00." },
-        new() { Title = "Identity verification", Description = "Upload a valid ID or passport so the host can verify you before arrival." }
-    };
-
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IFileStorage _files;
+    private readonly INotificationService _notifications;
 
-    public CheckInController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files)
+    public CheckInController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications)
     {
         _db = db;
         _userManager = userManager;
         _files = files;
+        _notifications = notifications;
     }
 
     // Step 1: Rules
@@ -69,7 +55,7 @@ public class CheckInController : Controller
             BookingId = booking.Id,
             PropertyTitle = booking.Property.Title,
             ProcessTitle = process.Title,
-            Steps = ParseSteps(process.StepsJson)
+            Steps = CheckInStepsSerializer.Parse(process.StepsJson)
         });
     }
 
@@ -92,7 +78,7 @@ public class CheckInController : Controller
             model.BookingId = booking.Id;
             model.PropertyTitle = booking.Property.Title;
             model.ProcessTitle = process.Title;
-            model.Steps = ParseSteps(process.StepsJson);
+            model.Steps = CheckInStepsSerializer.Parse(process.StepsJson);
             return View(model);
         }
 
@@ -224,6 +210,13 @@ public class CheckInController : Controller
         }
 
         checkIn.Status = CheckInStatus.DocumentsSubmitted;
+
+        var guest = await _userManager.GetUserAsync(User);
+        var guestName = guest?.FullName ?? "A guest";
+        _notifications.Notify(booking.Property.HostId, "Check-in submitted",
+            $"{guestName} submitted documents for \"{booking.Property.Title}\". Please verify them.",
+            NotificationType.BookingUpdate, $"/Host/VerifyCheckIn/{booking.Id}");
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Check-in submitted. The host will verify your document.";
@@ -280,23 +273,11 @@ public class CheckInController : Controller
         {
             PropertyId = propertyId,
             Title = "Guest check-in",
-            StepsJson = JsonSerializer.Serialize(DefaultSteps, JsonOptions)
+            StepsJson = CheckInStepsSerializer.SerializeDefault()
         };
         _db.CheckInProcesses.Add(process);
         await _db.SaveChangesAsync();
         return process;
-    }
-
-    private static List<CheckInStepDto> ParseSteps(string json)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<List<CheckInStepDto>>(json, JsonOptions) ?? new();
-        }
-        catch (JsonException)
-        {
-            return new();
-        }
     }
 
     private static List<GuestDocumentRowVM> DocumentRows(GuestCheckIn checkIn) =>

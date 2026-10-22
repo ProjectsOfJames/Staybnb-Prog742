@@ -18,12 +18,14 @@ public class HostController : Controller
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IFileStorage _files;
+    private readonly INotificationService _notifications;
 
-    public HostController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files)
+    public HostController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications)
     {
         _db = db;
         _userManager = userManager;
         _files = files;
+        _notifications = notifications;
     }
 
     private string UserId => _userManager.GetUserId(User)!;
@@ -238,6 +240,11 @@ public class HostController : Controller
         }
 
         booking.Status = BookingStatus.Approved;
+
+        _notifications.Notify(booking.GuestId, "Booking Approved",
+            $"Your booking for \"{booking.Property.Title}\" ({booking.CheckInDate:dd MMM} - {booking.CheckOutDate:dd MMM yyyy}) was approved. You can now complete check-in.",
+            NotificationType.Success, $"/Bookings/Details/{booking.Id}");
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Booking approved.";
@@ -257,6 +264,11 @@ public class HostController : Controller
         }
 
         booking.Status = BookingStatus.Rejected;
+
+        _notifications.Notify(booking.GuestId, "Booking Rejected",
+            $"Unfortunately your request for \"{booking.Property.Title}\" was not accepted.",
+            NotificationType.Warning, $"/Bookings/Details/{booking.Id}");
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Booking rejected.";
@@ -322,6 +334,16 @@ public class HostController : Controller
                 ? CheckInStatus.Verified
                 : CheckInStatus.Rejected;
 
+        var title = checkIn.Booking.Property.Title;
+        if (approve)
+            _notifications.Notify(checkIn.Booking.GuestId, "Document verified",
+                $"Your document for \"{title}\" was verified.",
+                NotificationType.Success, $"/CheckIn/Confirm/{bookingId}");
+        else
+            _notifications.Notify(checkIn.Booking.GuestId, "Document rejected",
+                $"Your document for \"{title}\" could not be verified. Please upload a clearer one.",
+                NotificationType.Warning, $"/CheckIn/Upload/{bookingId}");
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = approve ? "Document verified." : "Document rejected. The guest can upload a new one.";
@@ -344,6 +366,11 @@ public class HostController : Controller
         }
 
         booking.Status = BookingStatus.CheckedIn;
+
+        _notifications.Notify(booking.GuestId, "You're checked in",
+            $"You're checked in at \"{booking.Property.Title}\". Enjoy your stay!",
+            NotificationType.Success, $"/Bookings/Details/{booking.Id}");
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Guest checked in.";

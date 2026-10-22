@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Staybnb.Data;
 using Staybnb.Models;
+using Staybnb.Services;
 using Staybnb.ViewModels;
 
 namespace Staybnb.Controllers;
@@ -19,11 +20,13 @@ public class AdminController : Controller
 
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly INotificationService _notifications;
 
-    public AdminController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    public AdminController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, INotificationService notifications)
     {
         _db = db;
         _userManager = userManager;
+        _notifications = notifications;
     }
 
     // Dashboard
@@ -189,6 +192,10 @@ public class AdminController : Controller
         application.RejectionReason = null;
         application.Property.IsActive = true;   // approved listings go live
 
+        _notifications.Notify(user.Id, "Host Application Approved",
+            $"Congratulations! Your application for \"{application.Property.Title}\" was approved and is now live.",
+            NotificationType.Success, "/Host/Dashboard");
+
         await _db.SaveChangesAsync();
         await tx.CommitAsync();
 
@@ -218,6 +225,10 @@ public class AdminController : Controller
         application.RejectionReason = model.Reason.Trim();
         application.ReviewedAt = DateTime.UtcNow;
         application.ReviewedById = _userManager.GetUserId(User);
+
+        _notifications.Notify(application.ApplicationUserId, "Host Application Rejected",
+            $"Your application was not approved. Reason: {application.RejectionReason}",
+            NotificationType.Warning, "/HostApplication/Status");
 
         await _db.SaveChangesAsync();
 
@@ -317,6 +328,11 @@ public class AdminController : Controller
             TempData["Error"] = string.Join(" ", removed.Errors.Select(e => e.Description));
             return RedirectToAction(nameof(Users), new { q, role, page });
         }
+
+        _notifications.Notify(user.Id, "You're now an Admin",
+            "A SuperAdmin promoted your account. You now have access to the admin dashboard.",
+            NotificationType.Success, "/Admin/Dashboard");
+        await _db.SaveChangesAsync();
 
         await tx.CommitAsync();
 

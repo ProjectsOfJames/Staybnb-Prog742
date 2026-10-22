@@ -17,12 +17,14 @@ public class BookingsController : Controller
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IPricingService _pricing;
+    private readonly INotificationService _notifications;
 
-    public BookingsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IPricingService pricing)
+    public BookingsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IPricingService pricing, INotificationService notifications)
     {
         _db = db;
         _userManager = userManager;
         _pricing = pricing;
+        _notifications = notifications;
     }
 
     // My Bookings
@@ -103,6 +105,13 @@ public class BookingsController : Controller
         };
 
         _db.Bookings.Add(booking);
+
+        var guest = await _userManager.GetUserAsync(User);
+        var guestName = guest?.FullName ?? "A guest";
+        _notifications.Notify(property.HostId, "New booking request",
+            $"{guestName} requested \"{property.Title}\" for {checkIn:dd MMM} - {checkOut:dd MMM yyyy}.",
+            NotificationType.BookingUpdate, "/Host/Bookings");
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Booking request sent! The host will review it shortly.";
@@ -113,7 +122,7 @@ public class BookingsController : Controller
     public async Task<IActionResult> Cancel(int id)
     {
         var userId = _userManager.GetUserId(User);
-        var booking = await _db.Bookings.FirstOrDefaultAsync(b => b.Id == id && b.GuestId == userId);
+        var booking = await _db.Bookings.Include(b => b.Property).FirstOrDefaultAsync(b => b.Id == id && b.GuestId == userId);
         if (booking == null) return NotFound();
 
         var cancellable = (booking.Status == BookingStatus.Pending || booking.Status == BookingStatus.Approved)
@@ -125,6 +134,13 @@ public class BookingsController : Controller
         }
 
         booking.Status = BookingStatus.Cancelled;
+
+        var guest = await _userManager.GetUserAsync(User);
+        var guestName = guest?.FullName ?? "A guest";
+        _notifications.Notify(booking.Property.HostId, "Booking cancelled",
+            $"{guestName} cancelled their booking for \"{booking.Property.Title}\".",
+            NotificationType.Warning, "/Host/Bookings");
+
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Your booking was cancelled.";

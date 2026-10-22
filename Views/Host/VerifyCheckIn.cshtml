@@ -1,0 +1,84 @@
+﻿@model HostCheckInVM
+@{
+    ViewData["Title"] = "Guest check-in";
+}
+
+<div style="max-width:820px">
+    <a href="/Host/Bookings" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Booking requests</a>
+    <partial name="_Alerts" />
+
+    <div class="sb-panel my-3">
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+            <div>
+                <div class="fw-semibold fs-5">@Model.GuestName</div>
+                <div class="small text-muted">@Model.GuestEmail</div>
+            </div>
+            <div class="text-end">
+                <partial name="_StatusBadge" model="Model.Status.ToString()" />
+            </div>
+        </div>
+        <hr />
+        <div class="row small g-3">
+            <div class="col-md-4"><div class="text-muted">Property</div><div class="fw-semibold">@Model.PropertyTitle</div></div>
+            <div class="col-md-5"><div class="text-muted">Dates</div><div class="fw-semibold">@Model.CheckInDate.ToString("dd MMM") &ndash; @Model.CheckOutDate.ToString("dd MMM yyyy")</div></div>
+            <div class="col-md-3"><div class="text-muted">Guests</div><div class="fw-semibold">@Model.NumberOfGuests</div></div>
+        </div>
+    </div>
+
+    <div class="sb-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h6 fw-bold mb-0">Identity documents</h2>
+            @if (Model.GuestCheckInStatus.HasValue)
+            {
+                <partial name="_StatusBadge" model="Model.GuestCheckInStatus.Value.ToString()" />
+            }
+        </div>
+
+        @if (!Model.Documents.Any())
+        {
+            <p class="text-muted mb-0">The guest hasn't uploaded a document yet.</p>
+        }
+        else
+        {
+            @if (!Model.CanReview && Model.GuestCheckInStatus == CheckInStatus.InProgress)
+            {
+                <div class="alert alert-warning">The guest hasn't submitted their check-in yet. You can review once they do.</div>
+            }
+
+            @foreach (var d in Model.Documents)
+            {
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 py-2 border-bottom">
+                    <div>
+                        <span class="fw-semibold">@d.DocumentType</span>
+                        <a href="/Host/Document/@d.Id" target="_blank" class="small ms-2">Open document</a>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <partial name="_StatusBadge" model="d.Status.ToString()" />
+                        @if (Model.CanReview && d.Status == DocumentStatus.Pending)
+                        {
+                            <form asp-action="VerifyDocument" asp-route-id="@d.Id" method="post" class="d-inline">
+                                <input type="hidden" name="approve" value="true" />
+                                <button type="submit" class="btn btn-sm btn-success">Verify</button>
+                            </form>
+                            <form asp-action="VerifyDocument" asp-route-id="@d.Id" method="post" class="d-inline">
+                                <input type="hidden" name="approve" value="false" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        }
+
+        @if (Model.CanMarkCheckedIn)
+        {
+            <form asp-action="MarkCheckedIn" asp-route-id="@Model.BookingId" method="post" class="mt-3">
+                <button type="submit" class="btn btn-danger">Mark guest as checked in</button>
+            </form>
+        }
+        else if (Model.Status == BookingStatus.CheckedIn)
+        {
+            <div class="alert alert-success mt-3 mb-0">This guest has been checked in.</div>
+        }
+    </div>
+</div>

@@ -1,0 +1,113 @@
+﻿@model NotificationsPageVM
+@{
+    ViewData["Title"] = "Notifications";
+    var tabs = new (string Key, string Label, int Count)[]
+    {
+        ("all", "All", Model.TotalCount),
+        ("unread", "Unread", Model.UnreadCount),
+        ("read", "Read", Model.ReadCount),
+        ("today", "Today", Model.TodayCount)
+    };
+}
+
+<div class="container py-4" style="max-width:1000px">
+    <partial name="_Alerts" />
+
+    <div class="sb-panel p-0 overflow-hidden">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <h1 class="h5 fw-bold mb-0">Notifications</h1>
+                @if (Model.UnreadCount > 0)
+                {
+                    <span class="sb-badge" style="background:var(--sb-primary);color:#fff">@Model.UnreadCount new</span>
+                }
+            </div>
+            <form asp-action="MarkAllRead" method="post">
+                <input type="hidden" name="filter" value="@Model.Filter" />
+                <button type="submit" class="btn btn-sm btn-outline-secondary" @(Model.UnreadCount == 0 ? "disabled" : null)>
+                    <i class="bi bi-check2-all"></i> Mark all read
+                </button>
+            </form>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 p-3 border-bottom">
+            @foreach (var t in tabs)
+            {
+                <a href="/Notifications?filter=@t.Key"
+                   class="btn btn-sm @(Model.Filter == t.Key ? "btn-danger" : "btn-outline-secondary")">
+                    @t.Label <span class="ms-1 opacity-75">@t.Count</span>
+                </a>
+            }
+        </div>
+
+        <div class="row g-0">
+            <div class="col-lg-5 border-end" style="max-height:60vh;overflow-y:auto">
+                @if (!Model.Items.Any())
+                {
+                    <div class="text-center text-muted py-5 px-3">
+                        <i class="bi bi-bell-slash fs-1"></i>
+                        <p class="mt-2 mb-0">Nothing here.</p>
+                    </div>
+                }
+
+                @foreach (var n in Model.Items)
+                {
+                    var isSelected = Model.Selected?.Id == n.Id;
+                    <a href="/Notifications?filter=@Model.Filter&selectedId=@n.Id"
+                       class="d-flex gap-2 p-3 border-bottom text-decoration-none @(isSelected ? "bg-light" : "") @(n.IsRead ? "" : "border-start border-4 border-danger")">
+                        <partial name="_NotificationIcon" model="n.Type" />
+                        <div style="min-width:0">
+                            <div class="d-flex justify-content-between gap-2">
+                                <span class="@(n.IsRead ? "fw-semibold" : "fw-bold") text-truncate">@n.Title</span>
+                                <span class="small text-muted flex-shrink-0">@Staybnb.Services.TimeAgo.Format(n.CreatedAt)</span>
+                            </div>
+                            <div class="small text-muted text-truncate">@n.Message</div>
+                        </div>
+                    </a>
+                }
+            </div>
+
+            <div class="col-lg-7">
+                @if (Model.Selected == null)
+                {
+                    <div class="text-center text-muted py-5 px-3">
+                        <i class="bi bi-envelope-open fs-1"></i>
+                        <p class="mt-2 mb-0">Select a notification to read it.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="p-4">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <partial name="_NotificationIcon" model="Model.Selected.Type" />
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between">
+                                    <h2 class="h6 fw-bold mb-1">@Model.Selected.Title</h2>
+                                    <partial name="_StatusBadge" model='Model.Selected.IsRead ? "Read" : "Unread"' />
+                                </div>
+                                <div class="small text-muted">
+                                    @Model.Selected.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm") &middot;
+                                    @Staybnb.Services.TimeAgo.Format(Model.Selected.CreatedAt)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border rounded-3 p-3 mb-3" style="white-space:pre-wrap">@Model.Selected.Message</div>
+
+                        <div class="d-flex gap-2">
+                            @if (!string.IsNullOrWhiteSpace(Model.Selected.LinkUrl))
+                            {
+                                <a href="@Model.Selected.LinkUrl" class="btn btn-danger btn-sm"><i class="bi bi-box-arrow-up-right"></i> Take action</a>
+                            }
+                            <form asp-action="Delete" asp-route-id="@Model.Selected.Id" method="post"
+                                  onsubmit="return confirm('Delete this notification?');">
+                                <input type="hidden" name="filter" value="@Model.Filter" />
+                                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

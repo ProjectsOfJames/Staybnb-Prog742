@@ -1,0 +1,35 @@
+﻿@model NotificationBellVM
+<div class="dropdown">
+    <button type="button" class="sb-icon-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+        <i class="bi bi-bell"></i>
+        @if (Model.UnreadCount > 0)
+        {
+            <span class="sb-bell-dot">@(Model.UnreadCount > 9 ? "9+" : Model.UnreadCount.ToString())</span>
+        }
+    </button>
+
+    <div class="dropdown-menu dropdown-menu-end shadow-sm p-0" style="width:340px">
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <span class="fw-bold">Notifications</span>
+            <a href="/Notifications" class="small">View all</a>
+        </div>
+
+        @if (!Model.Latest.Any())
+        {
+            <div class="text-center text-muted small py-4">You're all caught up.</div>
+        }
+
+        @foreach (var n in Model.Latest)
+        {
+            <a href="/Notifications?selectedId=@n.Id"
+               class="dropdown-item d-flex gap-2 py-2 @(n.IsRead ? "" : "bg-light")" style="white-space:normal">
+                <partial name="_NotificationIcon" model="n.Type" />
+                <div style="min-width:0">
+                    <div class="small @(n.IsRead ? "fw-semibold" : "fw-bold")">@n.Title</div>
+                    <div class="small text-muted text-truncate">@n.Message</div>
+                    <div class="text-muted" style="font-size:.7rem">@Staybnb.Services.TimeAgo.Format(n.CreatedAt)</div>
+                </div>
+            </a>
+        }
+    </div>
+</div>

@@ -20,12 +20,14 @@ public class HostApplicationController : Controller
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IFileStorage _files;
+    private readonly INotificationService _notifications;
 
-    public HostApplicationController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files)
+    public HostApplicationController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IFileStorage files, INotificationService notifications)
     {
         _db = db;
         _userManager = userManager;
         _files = files;
+        _notifications = notifications;
     }
 
     [HttpGet]
@@ -111,6 +113,17 @@ public class HostApplicationController : Controller
                 Property = property,
                 Status = ApplicationStatus.Pending
             });
+
+            var applicant = await _userManager.GetUserAsync(User);
+            var applicantName = applicant?.FullName ?? "A user";
+
+            _notifications.Notify(userId, "Application submitted",
+                $"Your application for \"{property.Title}\" was received and is under review.",
+                NotificationType.ApplicationUpdate, "/HostApplication/Status");
+
+            await _notifications.NotifyAdminsAsync("New host application",
+                $"{applicantName} applied with \"{property.Title}\".",
+                NotificationType.ApplicationUpdate, "/Admin/HostRequests");
 
             await _db.SaveChangesAsync();
         }

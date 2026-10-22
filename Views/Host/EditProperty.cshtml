@@ -1,0 +1,92 @@
+﻿@model HostPropertyEditVM
+@{
+    ViewData["Title"] = "Edit property";
+}
+
+<div style="max-width:820px">
+    <a href="/Host/Properties" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> My properties</a>
+    <partial name="_Alerts" />
+
+    <form asp-action="EditProperty" asp-route-id="@Model.Id" method="post" class="mt-2">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="sb-panel mb-4">
+            <h2 class="h6 fw-bold mb-3">Property details</h2>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="Title" class="form-label"></label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Address" class="form-label"></label>
+                    <input asp-for="Address" class="form-control" />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="City" class="form-label"></label>
+                    <input asp-for="City" class="form-control" />
+                    <span asp-validation-for="City" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="PropertyType" class="form-label"></label>
+                    <select asp-for="PropertyType" asp-items="@(new SelectList(HostApplicationVM.PropertyTypes))" class="form-select"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="PricePerNight" class="form-label"></label>
+                    <input asp-for="PricePerNight" class="form-control" />
+                    <span asp-validation-for="PricePerNight" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="CleaningFee" class="form-label"></label>
+                    <input asp-for="CleaningFee" class="form-control" />
+                    <span asp-validation-for="CleaningFee" class="text-danger"></span>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="MaxGuests" class="form-label"></label>
+                    <input asp-for="MaxGuests" class="form-control" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="Bedrooms" class="form-label"></label>
+                    <input asp-for="Bedrooms" class="form-control" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="Beds" class="form-label"></label>
+                    <input asp-for="Beds" class="form-control" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label asp-for="Bathrooms" class="form-label"></label>
+                    <input asp-for="Bathrooms" class="form-control" />
+                </div>
+            </div>
+        </div>
+
+        <div class="sb-panel mb-4">
+            <h2 class="h6 fw-bold mb-3">Amenities</h2>
+            <div class="row row-cols-2 row-cols-md-4 g-2">
+                @foreach (var a in Model.AvailableAmenities)
+                {
+                    <div class="col">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="SelectedAmenityIds" value="@a.Id" id="am@(a.Id)"
+                                   checked="@Model.SelectedAmenityIds.Contains(a.Id)" />
+                            <label class="form-check-label" for="am@(a.Id)"><i class="bi @a.IconClass me-1"></i>@a.Name</label>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-danger">Save changes</button>
+        <a href="/Host/Properties" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
