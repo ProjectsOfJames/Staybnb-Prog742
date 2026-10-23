@@ -5,6 +5,8 @@
     var rand = CultureInfo.GetCultureInfo("en-ZA");
 }
 
+<partial name="_Alerts" />
+
 <div class="sb-panel mb-4">
     <h2 class="h5 fw-bold" style="color:var(--sb-primary)">Welcome back, @Model.HostName!</h2>
     <p class="text-muted small">Here's what's happening with your properties today.</p>
@@ -33,7 +35,7 @@
     <div class="col">
         <div class="sb-stat">
             <div class="sb-stat-value">@Model.TotalEarnings.ToString("C0", rand)</div>
-            <div class="sb-stat-label">Total Earnings</div>
+            <div class="sb-stat-label">Total Earnings (paid)</div>
         </div>
     </div>
     <div class="col">
